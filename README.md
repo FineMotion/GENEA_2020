@@ -1,5 +1,5 @@
 # FineMotion
-`pymo_experiments.ipyb` - тут играемся с `pymo`, чтобы понять как работать с данными motion capture
+`pymo_experiments.ipyb` - тут играемся с PyMO, чтобы понять как работать с данными motion capture
 
 `process_motions.py` - скрипт конвертации BVH-файлов в фичи. За основу взят этот [скрипт](https://github.com/GestureGeneration/Speech_driven_gesture_generation_with_autoencoder/blob/GENEA_2020/data_processing/bvh2features.py).
 Модуль `pymo` брался оттуда же, но основной репозиторий PyMo [тут](https://github.com/omimo/PyMO),
@@ -16,3 +16,6 @@
     - `cnst` дропает колонки с константами
     - `np` переводит в numpy-массив
 - Полученные массивы сохраняются в файлы, отраженные отдельно. Итого для каждой исходной записи имеем 2 массива.
+
+`visualization.ipynb` - ноутбук с примером, как исходный BVH-файл подготовить к отправке на сервер визуализации 
+или визуализировать с помощью PyMO
