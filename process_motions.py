@@ -7,15 +7,16 @@ from sklearn.pipeline import Pipeline
 
 from pymo.parsers import BVHParser
 from pymo.preprocessing import DownSampler, RootTransformer, JointSelector, MocapParameterizer, ConstantsRemover, \
-    Numpyfier, Mirror
+    Numpyfier
 import logging
+import joblib as jl
 
 
 class MotionFeaturesExtractor:
     def __init__(self):
         pass
 
-    def process_folder(self, src_dir: str, dst_dir: str, fps: int = 20):
+    def process_folder(self, src_dir: str, dst_dir: str, pipeline_dir, fps: int = 20):
         bvh_parser = BVHParser()
         data = []
         bvh_names = listdir(src_dir)
@@ -29,7 +30,7 @@ class MotionFeaturesExtractor:
         data_pipe = Pipeline([
             ('dwnsampl', DownSampler(tgt_fps=fps, keep_all=False)),
             ('root', RootTransformer('hip_centric')),
-            ('mir', Mirror(axis='X', append=True)),
+            # ('mir', Mirror(axis='X', append=True)),
             ('jtsel', JointSelector(
                 ['Spine', 'Spine1', 'Spine2', 'Spine3', 'Neck', 'Neck1', 'Head', 'RightShoulder', 'RightArm',
                  'RightForeArm', 'RightHand', 'LeftShoulder', 'LeftArm', 'LeftForeArm', 'LeftHand'],
@@ -40,6 +41,9 @@ class MotionFeaturesExtractor:
         ])
         logging.info('Transforming data...')
         out_data = data_pipe.fit_transform(data)
+        if not exists(pipeline_dir):
+            mkdir(pipeline_dir)
+        jl.dump(data_pipe, join(pipeline_dir, 'data_pipe.sav'))
 
         logging.info('Saving result...')
         if not exists(dst_dir):
@@ -47,8 +51,8 @@ class MotionFeaturesExtractor:
         for i, bvh_name in enumerate(bvh_names):
             name, _ = splitext(bvh_name)
             logging.info(name)
-            np.savez(join(dst_dir, name + ".npz"), clips=out_data[i])
-            np.savez(join(dst_dir, name + "_mirrored.npz"), clips=out_data[len(bvh_names) + i])
+            np.save(join(dst_dir, name + ".npy"), out_data[i])
+            # np.savez(join(dst_dir, name + "_mirrored.npz"), clips=out_data[len(bvh_names) + i])
 
 
 if __name__ == '__main__':
@@ -56,8 +60,9 @@ if __name__ == '__main__':
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--src_dir', help='Path to original motions folder')
     arg_parser.add_argument('--dst_dir', help='Path where extracted features will be stored')
+    arg_parser.add_argument('--pipeline_dir', default='./pipe', help='Path to save pipeline')
 
     args = arg_parser.parse_args()
     extractor = MotionFeaturesExtractor()
-    extractor.process_folder(args.src_dir, args.dst_dir)
+    extractor.process_folder(args.src_dir, args.dst_dir, args.pipeline_dir)
 
