@@ -2,9 +2,8 @@ import logging
 from argparse import ArgumentParser
 from os import mkdir, listdir
 from os.path import exists, splitext, join
+from tools import calculate_mfcc
 
-import scipy.io.wavfile as wav
-from python_speech_features import mfcc
 import numpy as np
 
 
@@ -19,23 +18,9 @@ class AudioFeaturesExtractor:
 
         for audio in listdir(src_dir):
             recording_name, _ = splitext(audio)
-            mfccs = self.calculate_mfcc(join(src_dir, audio))
+            mfccs = calculate_mfcc(join(src_dir, audio))
             logging.info(f"{recording_name}:{mfccs.shape}")
             np.save(join(dst_dir, recording_name + '.npy'), mfccs)
-
-    def average(self, arr, n):
-        end = n * int(len(arr) / n)
-        return np.mean(arr[:end].reshape(-1, n), 1)
-
-    def calculate_mfcc(self, audio_filename: str):
-        rate, data = wav.read(audio_filename)
-        # make mono from stereo
-        if len(data.shape) == 2:
-            data = (data[:, 0] + data[:, 1]) / 2
-        mfccs = mfcc(data, winlen=0.02, winstep=0.01, samplerate=rate, numcep=26, nfft=1024)
-        # average to meet to framerate (20fps)
-        mfccs = [self.average(mfccs[:, i], 5) for i in range(26)]
-        return np.transpose(mfccs)
 
 
 if __name__ == '__main__':
