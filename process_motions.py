@@ -11,12 +11,14 @@ from pymo.preprocessing import DownSampler, RootTransformer, JointSelector, Moca
 import logging
 import joblib as jl
 
+from pymo.writers import BVHWriter
+
 
 class MotionFeaturesExtractor:
     def __init__(self):
         pass
 
-    def process_folder(self, src_dir: str, dst_dir: str, pipeline_dir, fps: int = 20):
+    def process_folder(self, src_dir: str, dst_dir: str, pipeline_dir: str, fps: int = 20):
         bvh_parser = BVHParser()
         data = []
         bvh_names = listdir(src_dir)
@@ -54,6 +56,27 @@ class MotionFeaturesExtractor:
             np.save(join(dst_dir, name + ".npy"), out_data[i])
             # np.savez(join(dst_dir, name + "_mirrored.npz"), clips=out_data[len(bvh_names) + i])
 
+    def create_bvh(self, src_dir: str, dst_dir: str, pipeline_dir: str):
+        pipeline = jl.load(join(pipeline_dir, 'data_pipe.sav'))
+        data = []
+        recordings = listdir(src_dir)
+        for recording in recordings:
+            features = np.load(join(src_dir, recording))
+            logging.info(f"{recording} motion features shape: {features.shape}")
+            data.append(features)
+        logging.info("Transforming data")
+        bvh_data = pipeline.inverse_transform(data)
+
+        if not exists(dst_dir):
+            mkdir(dst_dir)
+        writer = BVHWriter()
+        logging.info("Saving bvh...")
+        for i, recording in enumerate(recordings):
+            logging.info(recording)
+            recording_name, _ = splitext(recording)
+            with open(join(dst_dir, recording_name + '.bvh'), 'w') as f:
+                writer.write(bvh_data[i], f)
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
@@ -61,8 +84,11 @@ if __name__ == '__main__':
     arg_parser.add_argument('--src_dir', help='Path to original motions folder')
     arg_parser.add_argument('--dst_dir', help='Path where extracted features will be stored')
     arg_parser.add_argument('--pipeline_dir', default='./pipe', help='Path to save pipeline')
-
+    arg_parser.add_argument('--bvh', action="store_true", help='Make bvh from features')
     args = arg_parser.parse_args()
     extractor = MotionFeaturesExtractor()
-    extractor.process_folder(args.src_dir, args.dst_dir, args.pipeline_dir)
+    if args.bvh:
+        extractor.create_bvh(args.src_dir, args.dst_dir, args.pipeline_dir)
+    else:
+        extractor.process_folder(args.src_dir, args.dst_dir, args.pipeline_dir)
 
