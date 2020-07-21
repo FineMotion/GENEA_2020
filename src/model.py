@@ -7,6 +7,7 @@ OUTPUT_DIM = 45
 CONTEXT_SIZE = 61
 DROPOUT_RATE = 0.1
 
+
 class LinearWithBatchNorm(nn.Module):
     def __init__(self, input_dim: int, output_dim: int):
         super(LinearWithBatchNorm, self).__init__()
