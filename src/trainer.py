@@ -5,13 +5,14 @@ import math
 
 
 class MotionTrainer:
-    def __init__(self, train_iterator: DataLoader, test_iterator: DataLoader, model: nn.Module):
+    def __init__(self, train_iterator: DataLoader, test_iterator: DataLoader, model: nn.Module, model_name='best.pt'):
         self.model = model
         self.optimizer = torch.optim.Adam(model.parameters(), lr=0.0003, betas=(0.9, 0.999))
         self.train_iterator = train_iterator
         self.test_iterator = test_iterator
         self.criterion = nn.MSELoss()
         self.best_loss = math.inf
+        self.model_name=model_name
 
     def train_epoch(self):
         total_loss = 0
@@ -41,5 +42,5 @@ class MotionTrainer:
         if loss < self.best_loss:
             print('New best loss on test: %4f' % loss)
             self.best_loss = loss
-            torch.save(self.model.state_dict(), 'best.pt')
+            torch.save(self.model.state_dict(), self.model_name)
 
