@@ -21,8 +21,8 @@ def create_motion_array(data_files: List[str]) -> np.ndarray:
 
 if __name__ == "__main__":
     device = torch.device('cuda')
-    data_filenames = listdir('data/Ready')
-    data_files = [join('data/Ready', data_filename) for data_filename in data_filenames]
+    data_filenames = listdir('../data/Ready')
+    data_files = [join('../data/Ready', data_filename) for data_filename in data_filenames]
     train_array = create_motion_array(data_files[1:])
     test_array = create_motion_array(data_files[:1])
 
@@ -31,6 +31,8 @@ if __name__ == "__main__":
     test_normalized = normalize_data(test_array, max_val, mean_pose)
 
     sigma = np.std(train_normalized, axis=(0, 1))
+    print(sigma)
+    exit(1)
     train_dataset = NoisedMotionDataset(train_normalized, device, sigma)
     train_sampler = RandomSampler(train_dataset)
     train_iterator = DataLoader(train_dataset, batch_size=256, sampler=train_sampler,

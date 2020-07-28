@@ -15,20 +15,24 @@ def normalize_data(data, max_val, mean_pose, eps = 1e-8):
 
 
 class NoisedMotionDataset(Dataset):
-    def __init__(self, data: np.ndarray, device: torch.device, sigma, variance=0.01):
+    def __init__(self, data: np.ndarray, device: torch.device, sigma, variance=0.01, train=True):
         self.data = data
         self.device = device
         self.sigma = sigma
         self.variance = variance
         self.eps = 1e-15
+        self.train = train
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, item: int):
         x = self.data[item]
-        noise = np.random.normal(0.0, np.multiply(self.sigma, self.variance) + self.eps, len(x))
-        return torch.from_numpy(x+noise), torch.from_numpy(x)
+        if self.train:
+            noise = np.random.normal(0.0, np.multiply(self.sigma, self.variance) + self.eps, len(x))
+            return torch.from_numpy(x+noise), torch.from_numpy(x)
+        else:
+            return torch.from_numpy(x), torch.from_numpy(x)
 
     def collate_fn(self, batch):
         x, y = list(zip(*batch))
