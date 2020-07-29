@@ -3,9 +3,8 @@ import logging
 from os import listdir, mkdir
 from os.path import join, exists
 import numpy as np
-from tqdm import tqdm
 
-from tools import calculate_mfcc
+from .audio_utils import calculate_mfcc
 
 
 class DataAligner:

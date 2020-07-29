@@ -1,9 +1,9 @@
 @echo off
-set MOTIONS="data\Motion"
-set FEATURES="data\Features"
-set AUDIO="data\Audio"
-set MFCC="data\MFCC"
-set READY="data\Ready"
+set MOTIONS="..\data\Motion"
+set FEATURES="..\data\Features"
+set AUDIO="..\data\Audio"
+set MFCC="..\data\MFCC"
+set READY="..\data\Ready"
 
 echo "Generating motion features..."
 python process_motions.py --src_dir %MOTIONS% --dst_dir %FEATURES%

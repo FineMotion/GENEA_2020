@@ -1,22 +1,13 @@
 import torch
+from torch.utils.data import RandomSampler, DataLoader
+import numpy as np
 from os import listdir
 from os.path import join
-from typing import List
 
-import numpy as np
-from torch.utils.data import RandomSampler, DataLoader
-
-from src.dae import get_normalization_values, normalize_data, NoisedMotionDataset, DenoisingAutoEncoder
-from src.trainer import MotionTrainer
-
-
-def create_motion_array(data_files: List[str]) -> np.ndarray:
-    result = []
-    for data_file in data_files:
-        data = np.load(data_file)
-        y = data['Y']
-        result.append(y)
-    return np.concatenate(result, axis=0)
+from .dataset import  NoisedMotionDataset
+from .model import DenoisingAutoEncoder
+from ..tools.trainer import MotionTrainer
+from ..tools.normalization import create_motion_array, get_normalization_values, normalize_data
 
 
 if __name__ == "__main__":
@@ -31,8 +22,6 @@ if __name__ == "__main__":
     test_normalized = normalize_data(test_array, max_val, mean_pose)
 
     sigma = np.std(train_normalized, axis=(0, 1))
-    print(sigma)
-    exit(1)
     train_dataset = NoisedMotionDataset(train_normalized, device, sigma)
     train_sampler = RandomSampler(train_dataset)
     train_iterator = DataLoader(train_dataset, batch_size=256, sampler=train_sampler,

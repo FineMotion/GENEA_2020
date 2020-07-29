@@ -1,21 +1,13 @@
-from os import listdir
-from os.path import join, split, splitext
-from typing import List
 import torch
 from torch.utils.data import SequentialSampler, DataLoader
-from tqdm import tqdm
-
-from src.dae import get_normalization_values, normalize_data, NoisedMotionDataset, DenoisingAutoEncoder
 import numpy as np
+from tqdm import tqdm
+from os import listdir
+from os.path import join, split, splitext
 
-
-def create_motion_array(data_files: List[str]) -> np.ndarray:
-    result = []
-    for data_file in data_files:
-        data = np.load(data_file)
-        y = data['Y']
-        result.append(y)
-    return np.concatenate(result, axis=0)
+from .dataset import NoisedMotionDataset
+from .model import DenoisingAutoEncoder
+from ..tools.normalization import get_normalization_values, normalize_data, create_motion_array
 
 
 if __name__ == '__main__':
