@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     data = np.load(args.src)
     model = DenoisingAutoEncoder()
-    model.load_state_dict(torch.load('DenoisingAutoEncoder.pt'))
+    model.load_state_dict(torch.load('dae_tanh.pt'))
     model.to(device)
 
     dataset = NoisedMotionDataset(data, device, sigma=None, train=False)

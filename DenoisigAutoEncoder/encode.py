@@ -5,9 +5,12 @@ from tqdm import tqdm
 from os import listdir
 from os.path import join, split, splitext
 
-from .dataset import NoisedMotionDataset
-from .model import DenoisingAutoEncoder
-from ..tools.normalization import get_normalization_values, normalize_data, create_motion_array
+from dataset import NoisedMotionDataset
+from model import DenoisingAutoEncoder
+
+import sys
+sys.path.append('../tools')
+from tools.normalization import get_normalization_values, normalize_data, create_motion_array
 
 
 if __name__ == '__main__':
@@ -19,7 +22,7 @@ if __name__ == '__main__':
     max_val, mean_pose = get_normalization_values(train_array)
 
     model = DenoisingAutoEncoder()
-    model.load_state_dict(torch.load('DenoisingAutoEncoder.pt'))
+    model.load_state_dict(torch.load('dae_tanh.pt'))
     model.to(device)
 
     for data_file in data_files:
@@ -39,4 +42,4 @@ if __name__ == '__main__':
             result.append(predict.detach().cpu().numpy())
         result = np.concatenate(result, axis=0)
         print(result.shape)
-        np.save(join('Encoded', data_name + '.npy'), result)
+        np.save(join('Encoded_dae', data_name + '.npy'), result)

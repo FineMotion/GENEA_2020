@@ -4,10 +4,13 @@ import numpy as np
 from os import listdir
 from os.path import join
 
-from .dataset import  NoisedMotionDataset
-from .model import DenoisingAutoEncoder
-from ..tools.trainer import MotionTrainer
-from ..tools.normalization import create_motion_array, get_normalization_values, normalize_data
+from dataset import  NoisedMotionDataset
+from model import DenoisingAutoEncoder
+
+import sys
+sys.path.append('../tools')
+from trainer import MotionTrainer
+from normalization import create_motion_array, get_normalization_values, normalize_data
 
 
 if __name__ == "__main__":
@@ -27,15 +30,13 @@ if __name__ == "__main__":
     train_iterator = DataLoader(train_dataset, batch_size=256, sampler=train_sampler,
                                 collate_fn=train_dataset.collate_fn)
 
-    test_dataset = NoisedMotionDataset(train_normalized, device, sigma)
+    test_dataset = NoisedMotionDataset(test_normalized, device, sigma)
     test_sampler = RandomSampler(test_dataset)
     test_iterator = DataLoader(test_dataset, batch_size=256, sampler=test_sampler,
                                collate_fn=test_dataset.collate_fn)
     model = DenoisingAutoEncoder()
     model.to(device)
 
-    trainer = MotionTrainer(train_iterator, test_iterator, model, 'DenoisingAutoEncoder.pt')
-    for epoch in range(100):
-        print('Epoch %d' % (epoch + 1))
-        trainer.train_epoch()
-        trainer.test_epoch()
+    trainer = MotionTrainer(train_iterator, test_iterator, model, 'dae_tanh.pt')
+    trainer.train(100, 20)
+    torch.save(trainer.model.state_dict(), 'dae_tanh_train.pt')
