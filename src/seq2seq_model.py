@@ -117,5 +117,6 @@ class Decoder(nn.Module):
             # start_pose - 1, batch, output_dim
             poses.append(start_pose)
         # poses [len, batch, output_dim]
-        poses = torch.stack(poses, dim=1)
+        poses = torch.cat(poses, dim=0)
+        # poses = torch.stack(poses, dim=0).squeeze(0)
         return poses

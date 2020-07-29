@@ -106,7 +106,7 @@ class Seq2SeqDataset(Dataset):
             data = np.load(file)
             X = data['X']
             Y = data['Y']
-            n = X.shape
+            n = X.shape[0]
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
             for i in range(n // predicted_poses):
@@ -116,7 +116,7 @@ class Seq2SeqDataset(Dataset):
                 y = Y[i * predicted_poses: (i + 1) * predicted_poses]
                 p = Y[i * predicted_poses - previous_poses: i * predicted_poses]
                 if len(p) == 0:
-                    p = AVERAGE_POSE.repeat(X.shape[0], 0)
+                    p = AVERAGE_POSE.repeat(self.previous_poses, 0)
                 self.features.append(x)
                 self.poses.append(y)
                 self.prev_poses.append(p)
@@ -125,9 +125,15 @@ class Seq2SeqDataset(Dataset):
         return len(self.features)
 
     def __getitem__(self, index: int):
-        return self.features[index], self.poses[index], self.prev_poses[index]
+        x = torch.FloatTensor(self.features[index])
+        y = torch.FloatTensor(self.poses[index])
+        p = torch.FloatTensor(self.prev_poses[index])
+        return x, y, p
 
     @staticmethod
     def collate_fn(batch):
         x, y, p = list(zip(*batch))
-        return torch.stack(x, dim=2), torch.stack(y, dim=2), torch.stack(p, dim=2)
+        X = torch.stack(x, dim=1)
+        Y = torch.stack(y, dim=1)
+        P = torch.stack(p, dim=1)
+        return X, Y, P
