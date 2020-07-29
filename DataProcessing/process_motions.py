@@ -1,17 +1,17 @@
 from argparse import ArgumentParser
 from os import listdir, mkdir
-from os.path import join, splitext, exists
+from os.path import join, splitext, exists, isdir, split
 
 import numpy as np
 from sklearn.pipeline import Pipeline
 
-from DataProcessing.pymo.parsers import BVHParser
-from DataProcessing.pymo.preprocessing import DownSampler, RootTransformer, JointSelector, MocapParameterizer, ConstantsRemover, \
+from pymo.parsers import BVHParser
+from pymo.preprocessing import DownSampler, RootTransformer, JointSelector, MocapParameterizer, ConstantsRemover, \
     Numpyfier
 import logging
 import joblib as jl
 
-from DataProcessing.pymo.writers import BVHWriter
+from pymo.writers import BVHWriter
 
 
 def process_folder(src_dir: str, dst_dir: str, pipeline_dir: str, fps: int = 20):
@@ -53,38 +53,43 @@ def process_folder(src_dir: str, dst_dir: str, pipeline_dir: str, fps: int = 20)
         # np.savez(join(dst_dir, name + "_mirrored.npz"), clips=out_data[len(bvh_names) + i])
 
 
-def create_bvh(src_dir: str, dst_dir: str, pipeline_dir: str):
+def create_bvh(src: str, dst: str, pipeline_dir: str):
     pipeline = jl.load(join(pipeline_dir, 'data_pipe.sav'))
     data = []
-    recordings = listdir(src_dir)
+    if isdir(src):
+        recordings = [join(src, recording) for recording in listdir(src)]
+    else:
+        recordings = [src]
+
     for recording in recordings:
-        features = np.load(join(src_dir, recording))
+        features = np.load(recording)
         logging.info(f"{recording} motion features shape: {features.shape}")
         data.append(features)
     logging.info("Transforming data")
     bvh_data = pipeline.inverse_transform(data)
 
-    if not exists(dst_dir):
-        mkdir(dst_dir)
+    if not exists(dst):
+        mkdir(dst)
     writer = BVHWriter()
     logging.info("Saving bvh...")
     for i, recording in enumerate(recordings):
         logging.info(recording)
-        recording_name, _ = splitext(recording)
-        with open(join(dst_dir, recording_name + '.bvh'), 'w') as f:
+        _, recording_filename = split(recording)
+        recording_name, _ = splitext(recording_filename)
+        with open(join(dst, recording_name + '.bvh'), 'w') as f:
             writer.write(bvh_data[i], f)
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--src_dir', help='Path to original motions folder')
-    arg_parser.add_argument('--dst_dir', help='Path where extracted features will be stored')
+    arg_parser.add_argument('--src', help='Path to original motions folder or file')
+    arg_parser.add_argument('--dst', help='Path where extracted features will be stored')
     arg_parser.add_argument('--pipeline_dir', default='./pipe', help='Path to save pipeline')
     arg_parser.add_argument('--bvh', action="store_true", help='Make bvh from features')
     args = arg_parser.parse_args()
     if args.bvh:
-        create_bvh(args.src_dir, args.dst_dir, args.pipeline_dir)
+        create_bvh(args.src, args.dst, args.pipeline_dir)
     else:
-        process_folder(args.src_dir, args.dst_dir, args.pipeline_dir)
+        process_folder(args.src, args.dst, args.pipeline_dir)
 

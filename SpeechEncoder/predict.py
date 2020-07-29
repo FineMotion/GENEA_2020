@@ -5,13 +5,22 @@ from tqdm import tqdm
 from os import listdir
 from os.path import join
 
-from .dataset import MotionDataset
-from .model import SpeechMotionModel
+from dataset import MotionDataset
+from model import SpeechMotionModel
+from scipy.signal import savgol_filter
+
+
+def smoothing(motion):
+
+    smoothed = [savgol_filter(motion[:,i], 9, 3) for i in range(motion.shape[1])]
+    new_motion = np.array(smoothed).transpose()
+    return new_motion
+
 
 if __name__ == '__main__':
     device = torch.device('cuda')
-    data_filenames = listdir('../data/Ready')
-    data_files = [join('../data/Ready', data_filename) for data_filename in data_filenames]
+    data_filenames = listdir('../data/Encoded')
+    data_files = [join('../data/Encoded', data_filename) for data_filename in data_filenames]
     print(data_files)
 
     test_dataset = MotionDataset(data_files=data_files[:1], device=device)
@@ -20,7 +29,7 @@ if __name__ == '__main__':
                                collate_fn=test_dataset.collate_fn)
 
     model = SpeechMotionModel()
-    model.load_state_dict(torch.load('best.pt'))
+    model.load_state_dict(torch.load('results/dae/speech_encoder.pt'))
     model.to(device)
 
     model.eval()
@@ -32,4 +41,6 @@ if __name__ == '__main__':
 
     result = np.concatenate(result, axis=0)
     print(result.shape)
-    np.save('predict.npy', result)
+    result = smoothing(result)
+    print(result.shape)
+    np.save('results/dae/predict.npy', result)

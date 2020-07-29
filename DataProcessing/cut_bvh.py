@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
-from .pymo.parsers import BVHParser
-from .pymo.writers import BVHWriter
+from pymo.parsers import BVHParser
+from pymo.writers import BVHWriter
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--SpeechEncoder', help='Source BHV file')
+    parser.add_argument('--src', help='Source BHV file')
     parser.add_argument('--dst', help='Result BVH file path')
     args = parser.parse_args()
 

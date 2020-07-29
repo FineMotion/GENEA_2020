@@ -3,7 +3,7 @@ import torch.nn as nn
 
 HIDDEN_DIM = 150
 INPUT_DIM = 26
-OUTPUT_DIM = 45
+OUTPUT_DIM = 40
 CONTEXT_SIZE = 61
 DROPOUT_RATE = 0.1
 

@@ -4,7 +4,7 @@ from os import listdir, mkdir
 from os.path import join, exists
 import numpy as np
 
-from .audio_utils import calculate_mfcc
+from audio_utils import calculate_mfcc
 
 
 class DataAligner:
@@ -37,7 +37,7 @@ class DataAligner:
         audio_data, motion_data = self.shorten(audio_data, motion_data)
         logging.debug(f"Shorten audio shape: {audio_data.shape}\tShorten motion shape: {motion_data.shape}")
         if not self.with_context:
-            return audio_file, motion_data
+            return audio_data, motion_data
 
         # convert audio data with context
         strides = len(audio_data)
@@ -62,6 +62,7 @@ class DataAligner:
             audio_file = join(self.audio_dir, recording)
             motion_file = join(self.motion_dir, recording)
             audio_data, motion_data = self.align_recording(audio_file, motion_file)
+            print(audio_data.shape, motion_data.shape)
             np.savez(join(dst_dir, "data_%03d.npz" % (i + 1)), X=audio_data, Y=motion_data)
 
 

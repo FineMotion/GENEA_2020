@@ -12,7 +12,8 @@ class MotionTrainer:
         self.test_iterator = test_iterator
         self.criterion = nn.MSELoss()
         self.best_loss = math.inf
-        self.model_name=model_name
+        self.model_name = model_name
+        self.best_epoch = 0
 
     def train_epoch(self):
         total_loss = 0
@@ -39,8 +40,21 @@ class MotionTrainer:
                   end='')
         print()
         loss = total_loss / len(self.test_iterator)
-        if loss < self.best_loss:
-            print('New best loss on test: %4f' % loss)
-            self.best_loss = loss
-            torch.save(self.model.state_dict(), self.model_name)
+        return loss
+
+    def train(self, num_epoches: int, patience: int):
+        for epoch in range(num_epoches):
+            print('Epoch %d' % (epoch + 1))
+            self.train_epoch()
+            test_loss = self.test_epoch()
+            if test_loss < self.best_loss:
+                print('New best loss on test: %4f' % test_loss)
+                self.best_loss = test_loss
+                self.best_epoch = epoch
+                torch.save(self.model.state_dict(), self.model_name)
+            else:
+                print('Previous best epoch: %d' % (self.best_epoch + 1))
+            if epoch - self.best_epoch > patience:
+                print('Exiting by patience')
+                break
 

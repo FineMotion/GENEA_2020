@@ -6,13 +6,17 @@ from tqdm import tqdm
 from os import listdir
 from os.path import join
 
-from .dataset import NoisedMotionDataset
-from .model import DenoisingAutoEncoder
-from ..tools.normalization import get_normalization_values, create_motion_array
+from dataset import NoisedMotionDataset
+from model import DenoisingAutoEncoder
+
+import sys
+sys.path.append('../tools')
+
+from normalization import get_normalization_values, create_motion_array
 
 if __name__ == '__main__':
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--SpeechEncoder')
+    arg_parser.add_argument('--src')
     arg_parser.add_argument('--dst')
     args = arg_parser.parse_args()
 
