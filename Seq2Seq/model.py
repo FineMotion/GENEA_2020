@@ -2,21 +2,18 @@ import torch
 import torch.nn as nn
 
 
-
-
 class Encoder(nn.Module):
-    def __init__(
-        self,
-        input_dim: int,
-        hidden_dim: int,
-        num_layers: int = 1,
-    ):
+    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1):
         super().__init__()
+
         self.rnn = nn.GRU(
-            input_dim,
-            hidden_dim,
-            bidirectional=True,
-            num_layers=num_layers,
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers
+        )
+        self.highway = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU()
         )
         self.dropout = nn.Dropout(0.1)
         self.hidden_dim = hidden_dim
@@ -25,6 +22,7 @@ class Encoder(nn.Module):
     def forward(self, x):
         seq_len, batch, input_dim = x.shape
         # x - [seq_len, batch, input_dim]
+        x = self.highway(x)
         output, hidden = self.rnn(x)
         # output - seq_len, batch, num_directions * hidden_size
         # hidden - num_layers * num_directions, batch, hidden_size
@@ -32,7 +30,6 @@ class Encoder(nn.Module):
 
 
 class Attention(nn.Module):
-
     def __init__(self, enc_dim: int, dec_dim: int):
         super().__init__()
         self.enc_to_dec = nn.Linear(enc_dim, dec_dim)
@@ -44,13 +41,15 @@ class Attention(nn.Module):
         # decoder_hidden - 1, batch, dec_dim
         encoder_states = encoder_states.transpose(0, 1)  # batch, enc_len, dec_dim
         decoder_hidden = decoder_hidden.permute(1, 2, 0)  # batch, dec_dim, 1
-        weights = torch.matmul(encoder_states, decoder_hidden).squeeze(2)  # batch, enc_len
+        weights = torch.matmul(encoder_states, decoder_hidden).squeeze(
+            2
+        )  # batch, enc_len
         scores = torch.softmax(weights, dim=1).unsqueeze(2)
         # encoder_states - batch, enc_len, dec_dim
         # scores - batch, enc_len, 1
         encoder_states = encoder_states.transpose(1, 2)
         # encoder_states - batch, dec_dim, enc_len
-        weighted_states = torch.matmul(encoder_states, scores) # batch, dec_dim, 1
+        weighted_states = torch.matmul(encoder_states, scores)  # batch, dec_dim, 1
         weighted_states = weighted_states.permute(2, 0, 1)
         # 1, batch, dec_dim
         return weighted_states
@@ -58,16 +57,11 @@ class Attention(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(
-        self,
-        output_dim: int,
-        hidden_dim: int,
-        enc_dim: int,
-        max_gen: int = 20,
+        self, output_dim: int, hidden_dim: int, enc_dim: int, max_gen: int = 20
     ):
         super().__init__()
         self.enc_dec_linear = nn.Linear(enc_dim, hidden_dim)
-        self.rnn = nn.GRU(
-            output_dim, hidden_dim)
+        self.rnn = nn.GRU(output_dim, hidden_dim)
         self.linear = nn.Linear(hidden_dim * 2, output_dim)
         self.max_gen = max_gen
         self.output_dim = output_dim
