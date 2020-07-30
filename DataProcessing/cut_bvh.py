@@ -1,8 +1,6 @@
-from pymo.parsers import BVHParser
-from pymo import viz_tools
-from pymo.preprocessing import MocapParameterizer
-from pymo.writers import BVHWriter
 from argparse import ArgumentParser
+from pymo.parsers import BVHParser
+from pymo.writers import BVHWriter
 
 if __name__ == '__main__':
     parser = ArgumentParser()

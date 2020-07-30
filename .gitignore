@@ -1,5 +1,10 @@
-pymo
+DataProcessing/pymo
 data
-pipe
+DataProcessing/pipe
 .ipynb_checkpoints
 .idea
+*.pt
+*.bvh
+*.npy
+*.npz
+*.mp4

@@ -16,7 +16,7 @@ class Encoder(nn.Module):
         x = self.hidden(x)
         x = torch.relu(x)
         x = self.out(x)
-        x = torch.relu(x)
+        x = torch.tanh(x)
         return x
 
 
@@ -30,7 +30,7 @@ class Decoder(nn.Module):
         x = self.hidden(x)
         x = torch.relu(x)
         x = self.out(x)
-        x = torch.sigmoid(x)
+        x = torch.tanh(x)
         return x
 
 
