@@ -60,7 +60,7 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def train_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path("data/dataset/train").glob("*.npz"), self.previous_poses, self.predicted_poses
+            Path(self.train_folder).glob("*.npz"), self.previous_poses, self.predicted_poses
         )
         loader = DataLoader(
             dataset, batch_size=50, shuffle=True, collate_fn=dataset.collate_fn
@@ -69,7 +69,7 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def val_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path("data/dataset/test").glob("*.npz"),
+            Path(self.test_folder).glob("*.npz"),
             self.previous_poses,
             self.predicted_poses,
         )

@@ -13,7 +13,7 @@ if __name__ == '__main__':
         mkdir(result_folder)
     data_files = [join('../data/Ready', data_filename) for data_filename in data_filenames]
 
-    train_array = create_motion_array(data_files[1:])
+    train_array = create_motion_array(sorted(data_files)[1:])
     max_val, mean_pose = get_normalization_values(train_array)
 
     for data_file in data_files:
