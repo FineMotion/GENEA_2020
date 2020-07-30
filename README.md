@@ -1,6 +1,7 @@
 # FineMotion
-`pymo_experiments.ipyb` - тут играемся с PyMO, чтобы понять как работать с данными motion capture
-
+## Обработка данных
+Папка `DataProcessing` используется для работы с данными. В ней находятся следующие скрипты.
+ 
 `process_motions.py` - скрипт конвертации BVH-файлов в фичи. За основу взят этот [скрипт](https://github.com/GestureGeneration/Speech_driven_gesture_generation_with_autoencoder/blob/GENEA_2020/data_processing/bvh2features.py).
 Модуль `pymo` брался оттуда же, но основной репозиторий PyMo [тут](https://github.com/omimo/PyMO),
 хотя в нем нет функции отражения по оси `Mirror`.
@@ -31,3 +32,6 @@
 за генерацию аудио-данных с контекстом или без.
  
 `prepare_data.bat` - Пример запуска подгототовки данных.
+
+`cut_bvh.py` - принимает на вход BVH-файл, уменьшает фпс до 20 и урезает до 1200 кадров, чтобы потом отправить на 
+сервер визуализации.

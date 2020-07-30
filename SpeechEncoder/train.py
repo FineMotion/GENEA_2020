@@ -1,16 +1,18 @@
+import torch
+from torch.utils.data import RandomSampler, DataLoader
 from os import listdir
 from os.path import join
+import sys
+from dataset import MotionDataset
+from model import SpeechMotionModel
 
-import torch
-from torch.utils.data import RandomSampler, DataLoader, SequentialSampler
-from src.dataset import MotionDataset
-from src.trainer import MotionTrainer
-from src.model import SpeechMotionModel
+sys.path.append('../tools')
+from trainer import MotionTrainer
 
 if __name__ == '__main__':
     device = torch.device('cuda')
-    data_filenames = listdir('data/Ready')
-    data_files = [join('data/Ready', data_filename) for data_filename in data_filenames]
+    data_filenames = listdir('../data/Encoded')
+    data_files = [join('../data/Encoded', data_filename) for data_filename in data_filenames]
     print(data_files)
 
     train_dataset = MotionDataset(data_files=data_files[1:], device=device)
@@ -25,8 +27,9 @@ if __name__ == '__main__':
 
     model = SpeechMotionModel()
     model.to(device)
-    trainer = MotionTrainer(train_iterator, test_iterator, model)
-    for epoch in range(500):
+    trainer = MotionTrainer(train_iterator, test_iterator, model, 'results/dae/speech_encoder.pt')
+    for epoch in range(100):
         print('Epoch %d' % (epoch + 1))
         trainer.train_epoch()
-        trainer.test_epoch()
+    torch.save(trainer.model.state_dict(), 'results/dae/speech_encoder.pt')
+    # trainer.train(500, 50)
