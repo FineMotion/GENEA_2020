@@ -13,7 +13,7 @@ class Encoder(nn.Module):
             nn.Linear(input_dim, hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU()
+            nn.ReLU(),
         )
         self.dropout = nn.Dropout(0.1)
         self.hidden_dim = hidden_dim

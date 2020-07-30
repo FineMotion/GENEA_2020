@@ -1,4 +1,6 @@
 DataProcessing/pymo
+__pycache__
+*ckpt
 data
 DataProcessing/pipe
 .ipynb_checkpoints

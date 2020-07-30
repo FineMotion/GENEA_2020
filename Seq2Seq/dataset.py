@@ -84,7 +84,7 @@ class Seq2SeqDataset(Dataset):
                 y = Y[i * predicted_poses : (i + 1) * predicted_poses]
                 p = Y[i * predicted_poses - previous_poses : i * predicted_poses]
                 if len(p) == 0:
-                    p = AVERAGE_POSE
+                    p = AVERAGE_POSE.repeat(self.previous_poses, 0)
                 self.features.append(x)
                 self.poses.append(y)
                 self.prev_poses.append(p)
