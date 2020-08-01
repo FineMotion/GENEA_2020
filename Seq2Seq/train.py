@@ -1,7 +1,7 @@
 import torch
 import pytorch_lightning as pl
 
-from system import Seq2SeqSystem
+from system import Seq2SeqSystem, AdversarialSeq2SeqSystem
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
@@ -10,8 +10,10 @@ parser.add_argument('--test', help='test folder', default="data/dataset/test")
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    system = Seq2SeqSystem(train_folder=args.train,
-                           test_folder=args.test)
+    # system = Seq2SeqSystem(train_folder=args.train,
+    #                        test_folder=args.test)
+    system = AdversarialSeq2SeqSystem(train_folder=args.train,
+                                      test_folder=args.test)
     trainer = pl.Trainer(
         gpus=1 if torch.cuda.is_available() else 0,
         max_epochs=50,
