@@ -1,4 +1,8 @@
 from argparse import ArgumentParser
+
+import sys
+sys.path.insert(0, '..')
+
 from pymo.parsers import BVHParser
 from pymo.writers import BVHWriter
 

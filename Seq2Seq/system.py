@@ -74,6 +74,6 @@ class Seq2SeqSystem(pl.LightningModule):
             self.predicted_poses,
         )
         loader = DataLoader(
-            dataset, batch_size=50, shuffle=True, collate_fn=dataset.collate_fn
+            dataset, batch_size=50, shuffle=False, collate_fn=dataset.collate_fn
         )
         return loader

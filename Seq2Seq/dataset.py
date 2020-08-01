@@ -77,7 +77,7 @@ class Seq2SeqDataset(Dataset):
             n = X.shape[0]
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
-            for i in range(n // predicted_poses + 1):
+            for i in range(n // predicted_poses):
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
                 x = X[i * predicted_poses : (i + 1) * predicted_poses, 30]

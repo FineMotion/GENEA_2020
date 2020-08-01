@@ -5,6 +5,9 @@ from os.path import join, splitext, exists, isdir, split
 import numpy as np
 from sklearn.pipeline import Pipeline
 
+import sys
+sys.path.insert(0, '..')
+
 from pymo.parsers import BVHParser
 from pymo.preprocessing import DownSampler, RootTransformer, JointSelector, MocapParameterizer, ConstantsRemover, \
     Numpyfier
@@ -85,7 +88,7 @@ if __name__ == '__main__':
     arg_parser = ArgumentParser()
     arg_parser.add_argument('--src', help='Path to original motions folder or file')
     arg_parser.add_argument('--dst', help='Path where extracted features will be stored')
-    arg_parser.add_argument('--pipeline_dir', default='./pipe', help='Path to save pipeline')
+    arg_parser.add_argument('--pipeline_dir', default='../pipe', help='Path to save pipeline')
     arg_parser.add_argument('--bvh', action="store_true", help='Make bvh from features')
     args = arg_parser.parse_args()
     if args.bvh:
