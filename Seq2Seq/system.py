@@ -124,15 +124,14 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
     def training_step(self, batch, batch_nb, optimizer_idx):
         audio_features, real_poses, prev_poses = batch
         pred_poses = self.forward(audio_features, prev_poses)
-        loss = self.calculate_loss(pred_poses, real_poses)
-        # return {"loss": loss}
+        batch_size = pred_poses.size(1)
 
         # train generator
         if optimizer_idx == 0:
             base_loss = self.base_loss(pred_poses, real_poses)
             cont_loss = torch.norm(pred_poses[1:] - pred_poses[:-1]) / (pred_poses.size(0) - 1)
 
-            is_real = torch.ones((pred_poses.size(0), 1)).to(pred_poses.device)
+            is_real = torch.ones((batch_size, 1)).to(pred_poses.device)
             adv_loss = F.binary_cross_entropy_with_logits(self.discriminator(pred_poses), is_real)
 
             loss = (base_loss + self.hparams.w_cont_loss * cont_loss
@@ -155,22 +154,12 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
                 'log': logs
             })
 
-            # adversarial loss is binary cross-entropy
-            # g_loss = self.adversarial_loss(self.discriminator(self.generated_imgs), valid)
-            # tqdm_dict = {'g_loss': g_loss}
-            # output = OrderedDict({
-            #     'loss': g_loss,
-            #     'progress_bar': tqdm_dict,
-            #     'log': tqdm_dict
-            # })
-            # return output
-
         # train discriminator
         if optimizer_idx == 1:
             d_real_scores = self.discriminator(real_poses)
             d_fake_scores = self.discriminator(pred_poses.detach())
 
-            is_real = torch.ones((pred_poses.size(0), 1)).to(pred_poses.device)
+            is_real = torch.ones((batch_size, 1)).to(pred_poses.device)
             real_loss = F.binary_cross_entropy_with_logits(d_real_scores, is_real)
             fake_loss = F.binary_cross_entropy_with_logits(d_fake_scores, 1 - is_real)
 
@@ -191,15 +180,6 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
                 'progress_bar': {'d_loss': d_loss, 'd_fake_score': d_fake_scores, 'd_real_score': d_real_scores},
                 'log': logs
             })
-
-            # # discriminator loss is the average of these
-            # d_loss = (real_loss + fake_loss) / 2
-            # tqdm_dict = {'d_loss': d_loss}
-            # output = OrderedDict({
-            #     'loss': d_loss,
-            #     'progress_bar': tqdm_dict,
-            #     'log': tqdm_dict
-            # })
 
     def validation_step(self, batch, batch_nb):
         x, y, p = batch
