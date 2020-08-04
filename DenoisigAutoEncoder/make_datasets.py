@@ -4,7 +4,7 @@ import numpy as np
 
 if __name__ == '__main__':
     data_input = '../data/Ready'
-    data_output = '../data/Encoded'
+    data_output = '../data/Encoded_dae'
     if not exists(data_output):
         mkdir(data_output)
 
@@ -12,7 +12,7 @@ if __name__ == '__main__':
         input_path = join(data_input, data_file)
         file_name, _ = splitext(data_file)
         print(file_name)
-        motions_path = join('Encoded', file_name + '.npy')
+        motions_path = join('Encoded_dae', file_name + '.npy')
         audio = np.load(input_path)['X']
         motions = np.load(motions_path)
 

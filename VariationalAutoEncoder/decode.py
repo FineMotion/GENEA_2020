@@ -6,7 +6,7 @@ from tqdm import tqdm
 from os import listdir
 from os.path import join
 
-from dae import DenoisingAutoEncoder
+from vae import VariationalAutoEncoder
 
 import sys
 sys.path.append('../tools')
@@ -23,8 +23,8 @@ if __name__ == '__main__':
     device = torch.device('cuda')
 
     data = np.load(args.src)
-    model = DenoisingAutoEncoder()
-    model.load_state_dict(torch.load('dae_tanh.pt'))
+    model = VariationalAutoEncoder()
+    model.load_state_dict(torch.load('vae_train.pt'))
     model.to(device)
 
     dataset = MotionDataset(data, device, sigma=None, add_noise=False)
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
     result = []
     for features, _ in tqdm(iterator):
-        predict = model.decoder(features)
+        predict = model.decode(features)
         result.append(predict.detach().cpu().numpy())
     result = np.concatenate(result, axis=0)
     print(result.shape)

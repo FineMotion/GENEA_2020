@@ -5,23 +5,20 @@ from tqdm import tqdm
 from os import listdir
 from os.path import join, split, splitext
 
-from dae import DenoisingAutoEncoder
+from vae import VariationalAutoEncoder
 
 import sys
 sys.path.append('../tools')
-from tools.normalization import get_normalization_values, normalize_data, create_motion_array
+from tools.normalization import create_motion_array
 from datasets import MotionDataset
 
 if __name__ == '__main__':
     device = torch.device('cuda')
-    data_filenames = listdir('../data/Ready')
-    data_files = [join('../data/Ready', data_filename) for data_filename in data_filenames]
-    train_array = create_motion_array(data_files[1:])
+    data_filenames = listdir('../data/Normalized')
+    data_files = [join('../data/Normalized', data_filename) for data_filename in data_filenames]
 
-    max_val, mean_pose = get_normalization_values(train_array)
-
-    model = DenoisingAutoEncoder()
-    model.load_state_dict(torch.load('dae_tanh.pt'))
+    model = VariationalAutoEncoder()
+    model.load_state_dict(torch.load('vae.pt'))
     model.to(device)
 
     for data_file in data_files:
@@ -30,15 +27,15 @@ if __name__ == '__main__':
         print(data_name)
 
         data_array = create_motion_array([data_file])
-        data_normalized = normalize_data(data_array, max_val, mean_pose)
-        dataset = MotionDataset(data_normalized, device, sigma=None, add_noise=False)
+        dataset = MotionDataset(data_array, device, sigma=None, add_noise=False)
         sampler = SequentialSampler(dataset)
         iterator = DataLoader(dataset, batch_size=256, sampler=sampler, collate_fn=dataset.collate_fn)
 
         result = []
         for features, _ in tqdm(iterator):
-            predict = model.encoder(features)
-            result.append(predict.detach().cpu().numpy())
+            mu, sigma = model.encode(features)
+            z = model.reparametrize(mu, sigma)
+            result.append(z.detach().cpu().numpy())
         result = np.concatenate(result, axis=0)
         print(result.shape)
-        np.save(join('Encoded_dae', data_name + '.npy'), result)
+        np.save(join('Encoded', data_name + '.npy'), result)
