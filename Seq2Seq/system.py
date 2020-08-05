@@ -15,18 +15,20 @@ class Seq2SeqSystem(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser: ArgumentParser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--train-folder", type=str)
-        parser.add_argument("--test-folder", type=str)
+        parser.add_argument("--train-folder", type=str, default="data/dataset/train")
+        parser.add_argument("--test-folder", type=str, default="data/dataset/test")
         parser.add_argument("--predicted-poses", type=int, default=20)
-        parser.add_argument("--previous_poses", type=int, default=10)
+        parser.add_argument("--previous-poses", type=int, default=10)
         return parser
 
     def __init__(
         self,
-        train_folder: str = "data/dataset/train",
-        test_folder: str = "data/dataset/test",
+        train_folder: str,
+        test_folder: str,
         predicted_poses: int = 20,
         previous_poses: int = 10,
+        *args,
+        **kwargs
     ):
         super().__init__()
         self.save_hyperparameters()
