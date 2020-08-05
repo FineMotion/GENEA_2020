@@ -3,6 +3,18 @@ from argparse import ArgumentParser
 import numpy as np
 
 
+def load_mean(filename: str):
+    mean_pose = np.load(filename)
+    return mean_pose["max_val"], mean_pose["mean_pose"]
+
+
+def denormalize(data, max_val, mean_pose):
+    eps = 1e-8
+    reconstructed = np.multiply(data, max_val[np.newaxis, :] + eps)
+    reconstructed = reconstructed + mean_pose[np.newaxis, :]
+    return reconstructed
+
+
 if __name__ == "__main__":
     arg_parser = ArgumentParser()
     arg_parser.add_argument("--src", help=".npy file with prediction")
@@ -17,11 +29,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     data = np.load(args.src)
-    mean_pose = np.load(args.mean)
-    max_val = mean_pose["max_val"]
-    mean_pose = mean_pose["mean_pose"]
-    eps = 1e-8
-    reconstructed = np.multiply(data, max_val[np.newaxis, :] + eps)
-    reconstructed = reconstructed + mean_pose[np.newaxis, :]
+    max_val, mean_pose = load_mean(args.mean)
+    reconstructed = denormalize(data, max_val, mean_pose)
     print(reconstructed.shape)
     np.save(args.dst, reconstructed)

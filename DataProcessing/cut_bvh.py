@@ -2,14 +2,10 @@ from argparse import ArgumentParser
 from pymo.parsers import BVHParser
 from pymo.writers import BVHWriter
 
-if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument('--src', help='Source BHV file')
-    parser.add_argument('--dst', help='Result BVH file path')
-    args = parser.parse_args()
 
+def main(src: str, dst: str):
     bvh_parser = BVHParser()
-    data = bvh_parser.parse(args.src)
+    data = bvh_parser.parse(src)
 
     target_fps = 20
     orig_fps = round(1.0 / data.framerate)
@@ -22,5 +18,13 @@ if __name__ == '__main__':
     new_data.framerate = 1.0 / target_fps
 
     bvh_writer = BVHWriter()
-    with open(args.dst, 'w') as f:
+    with open(dst, 'w') as f:
         bvh_writer.write(new_data, f)
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--src', help='Source BHV file')
+    parser.add_argument('--dst', help='Result BVH file path')
+    args = parser.parse_args()
+    main(args.src, args.dst)
