@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterator
 
 import numpy as np
 import torch
@@ -61,7 +61,7 @@ AVERAGE_POSE = AVERAGE_POSE[None, :]
 class Seq2SeqDataset(Dataset):
     def __init__(
         self,
-        data_files: Iterable[str],
+        data_files: Iterator[str],
         previous_poses: int = 10,
         predicted_poses: int = 20,
     ):

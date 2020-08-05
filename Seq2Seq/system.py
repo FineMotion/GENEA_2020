@@ -1,4 +1,5 @@
 from pathlib import Path
+from argparse import ArgumentParser
 
 import pytorch_lightning as pl
 import torch
@@ -10,6 +11,16 @@ from dataset import Seq2SeqDataset
 
 
 class Seq2SeqSystem(pl.LightningModule):
+
+    @staticmethod
+    def add_model_specific_args(parent_parser: ArgumentParser):
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument("--train-folder", type=str)
+        parser.add_argument("--test-folder", type=str)
+        parser.add_argument("--predicted-poses", type=int, default=20)
+        parser.add_argument("--previous_poses", type=int, default=10)
+        return parser
+
     def __init__(
         self,
         train_folder: str = "data/dataset/train",
@@ -18,6 +29,7 @@ class Seq2SeqSystem(pl.LightningModule):
         previous_poses: int = 10,
     ):
         super().__init__()
+        self.save_hyperparameters()
         self.encoder = Encoder(26, 150, 1)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
         self.predicted_poses = predicted_poses

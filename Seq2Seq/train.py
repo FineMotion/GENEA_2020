@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+
 import torch
 import pytorch_lightning as pl
 
@@ -5,10 +7,11 @@ from system import Seq2SeqSystem
 
 
 if __name__ == "__main__":
-    system = Seq2SeqSystem()
-    trainer = pl.Trainer(
-        gpus=1 if torch.cuda.is_available() else 0,
-        max_epochs=50,
-    )
+    parser = ArgumentParser()
+    parser = pl.Trainer.add_argparse_args(parser)
+    parser = Seq2SeqSystem.add_model_specific_args(parser)
+    args = parser.parse_args()
+    system = Seq2SeqSystem(args)
+    trainer = pl.Trainer.from_argparse_args(args)
     trainer.fit(system)
     trainer.save_checkpoint("./seq2seq_checkpoint")
