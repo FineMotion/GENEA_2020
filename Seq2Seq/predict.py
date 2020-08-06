@@ -2,12 +2,15 @@ from pathlib import Path
 
 import numpy as np
 
-from system import Seq2SeqSystem
+from system import Seq2SeqSystem, AdversarialSeq2SeqSystem
 from dataset import Seq2SeqDataset
 
 import os
 test_folder = os.environ.get("TEST_FOLDER", "data/dataset/test")
-system = Seq2SeqSystem.load_from_checkpoint("seq2seq_checkpoint", train_folder=None, test_folder=test_folder).eval().cuda()
+try:
+    system = Seq2SeqSystem.load_from_checkpoint("seq2seq_checkpoint", train_folder=None, test_folder=test_folder).eval().cuda()
+except:
+    system = AdversarialSeq2SeqSystem.load_from_checkpoint("seq2seq_checkpoint", train_folder=None, test_folder=test_folder).eval().cuda()
 dataset = Seq2SeqDataset(Path(test_folder).glob("*001.npz"), previous_poses=20, predicted_poses=50)  # TODO: схерали здесь такие параметры вообще? и *001.npz тоже плохую службу сослужит
 
 prev_poses = system.predicted_poses

@@ -114,3 +114,39 @@ class Decoder(nn.Module):
         poses = torch.cat(poses, dim=0)
         # poses = torch.stack(poses, dim=0).squeeze(0)
         return poses
+
+
+class Discriminator(nn.Module):
+
+    def __init__(self, ch_in, ch_hid = 100) -> None:
+        super().__init__()
+        # TODO: cp from here https://github.com/amirbar/speech2gesture/blob/24bf0d515a098910e6d5f2e64f280055ed2ad938/audio_to_multiple_pose_gan/static_model_factory.py#L35
+        self.net = nn.Sequential( # for t_in = 20
+            nn.Conv1d(ch_in, ch_hid, 4, 2),  # t -> 9
+            nn.BatchNorm1d(ch_hid),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv1d(ch_hid, ch_hid * 2, 3, 2),  # t -> 4
+            nn.BatchNorm1d(ch_hid * 2),
+            nn.LeakyReLU(0.2),
+            # nn.Conv1d(ch_hid, ch_hid, 3),#t-4
+            # nn.BatchNorm1d(ch_hid),
+            # nn.LeakyReLU(0.2),
+            # nn.Conv1d(ch_hid, 1, 3),# 1, t-6
+            # nn.BatchNorm1d(ch_hid),
+            # nn.LeakyReLU(0.2),
+        )
+        self.flat = nn.Sequential(
+            nn.Linear(ch_hid * 2 * 4, ch_hid),
+            nn.LeakyReLU(0.2),
+            nn.Linear(ch_hid, 1)
+        )
+
+    def forward(self, x_seq, x_cond_seq=None):
+        # TODO: consider speeds in x_seq
+        assert x_cond_seq is None
+        x_seq = x_seq.permute((1, 2, 0))  # (time, batch, ch) -> (batch, ch, time)
+        x = self.net(x_seq)
+        x = x.reshape((x.size(0), -1))
+        x = self.flat(x)
+        return x

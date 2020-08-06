@@ -1,4 +1,5 @@
 seq2seq_checkpoint
+pymo
 baselines
 lightning_logs
 DataProcessing/pymo
