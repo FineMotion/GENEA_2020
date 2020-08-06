@@ -97,13 +97,28 @@ class Seq2SeqSystem(pl.LightningModule):
     
 class AdversarialSeq2SeqSystem(pl.LightningModule):
 
+    @staticmethod
+    def add_model_specific_args(parent_parser: ArgumentParser):
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument("--train-folder", type=str,
+                            default="data/dataset/train")
+        parser.add_argument("--test-folder", type=str,
+                            default="data/dataset/test")
+        parser.add_argument("--predicted-poses", type=int, default=20)
+        parser.add_argument("--previous-poses", type=int, default=10)
+
+        parser.add_argument("--w_cont_loss", type=float, default=0.01)
+        parser.add_argument("--w_adv_loss", type=float, default=0.01)
+        return parser
+
     def __init__(
             self,
             train_folder: str = "data/dataset/train",
             test_folder: str = "data/dataset/test",
             predicted_poses: int = 20,
             previous_poses: int = 10,
-            *args,
+            w_cont_loss: float = 0.01,
+            w_adv_loss: float = 0.01,
             **kwargs
     ):
         super().__init__()
@@ -113,8 +128,8 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
             'lr': 1e-3,
             'beta1': 0.5,
             'beta2': 0.9,
-            'w_cont_loss': 0.01,
-            'w_adv_loss': 0.01
+            'w_cont_loss': w_cont_loss,
+            'w_adv_loss': w_adv_loss
         })
         self.encoder = Encoder(26, 150, 1)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
@@ -162,6 +177,7 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
                 # metrics
                 'd_fake_score': d_fake_score
             }
+            logs = {f'{k}/train': v for k, v in logs.items()}
 
             return OrderedDict({
                 'loss': loss,
@@ -190,6 +206,8 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
                 'd_fake_score': d_fake_scores,
                 'd_real_score': d_real_scores
             }
+            logs = {f'{k}/train': v for k, v in logs.items()}
+
             return OrderedDict({
                 'loss': d_loss,
                 'progress_bar': {'d_loss': d_loss, 'd_fake_score': d_fake_scores, 'd_real_score': d_real_scores},
@@ -197,16 +215,54 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
             })
 
     def validation_step(self, batch, batch_nb):
-        x, y, p = batch
-        pred_poses = self.forward(x, p)
-        loss = self.calculate_loss(pred_poses, y)
-        return {"loss": loss}
+        audio_features, real_poses, prev_poses = batch
+        pred_poses = self.forward(audio_features, prev_poses)
+        batch_size = pred_poses.size(1)
+
+        base_loss = self.base_loss(pred_poses, real_poses)
+        cont_loss = torch.norm(pred_poses[1:] - pred_poses[:-1]) / (
+                    pred_poses.size(0) - 1)
+
+        is_real = torch.ones((batch_size, 1)).to(pred_poses.device)
+        adv_loss = F.binary_cross_entropy_with_logits(
+            self.discriminator(pred_poses), is_real)
+
+        loss = (base_loss + self.hparams.w_cont_loss * cont_loss
+                + self.hparams.w_adv_loss * adv_loss)
+        # aux metrics
+        d_fake_score = F.sigmoid(self.discriminator(pred_poses)).mean()
+        logs = {
+            'loss': loss,
+            # loss components
+            'g_adv_loss': adv_loss,
+            'base_loss': base_loss,
+            'cont_loss': cont_loss,
+            # metrics
+            'd_fake_score': d_fake_score,
+            'd_real_score': F.sigmoid(self.discriminator(real_poses)).mean()
+        }
+        pbar = logs.copy()
+        logs = {f'{k}/valid': v for k, v in logs.items()}
+        return OrderedDict({
+            'loss': loss,
+            'progress_bar': pbar,
+            'log': logs
+        })
 
     def validation_epoch_end(self, outputs):
-        d = {"val_loss": 0}
-        for out in outputs:
-            d["val_loss"] += out["loss"]
-        return d
+        assert len(outputs) > 0
+        d = {}
+        for i in range(len(outputs)):
+            for key, value in outputs[i]["log"].items():
+                if key not in d:
+                    d[key] = []
+                d[key].append(value)
+        for key in d:
+            if len(d[key]) == 1:
+                d[key] = d[key][0]
+            else:
+                d[key] = torch.stack(d[key], 0).mean()  # на самом деле нифига подобного если последний батч неполный, но мне лень
+        return {"log": d}
 
     def configure_optimizers(self):
         lr = self.hparams.lr
