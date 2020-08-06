@@ -4,6 +4,8 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 
 import numpy as np
+from scipy.signal import savgol_filter
+
 
 from DataProcessing.reconstruct_data import load_mean, denormalize
 from DataProcessing.process_motions import create_bvh
@@ -13,6 +15,14 @@ from DataProcessing.visualization_example import main as get_mp4
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def smoothing(motion):
+
+    smoothed = [savgol_filter(motion[:,i], 9, 3) for i in range(motion.shape[1])]
+    new_motion = np.array(smoothed).transpose()
+    return new_motion
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -41,8 +51,17 @@ if __name__ == "__main__":
         default="pipe",
         help="pipe folder with pre/post processing."
     )
+    parser.add_argument(
+        "--smooth",
+        action="store_true",
+        default=False,
+        help="Flag to apply smoothing."
+        )
     args = parser.parse_args()
     prediction = np.load(args.pred)
+    if args.smooth:
+        logger.info("Smoothing prediction")
+        prediction = smoothing(prediction)
 
     logging.info("Reconstructing data by denormalizing it.")
     max_val, mean_pose = load_mean(args.mean)
