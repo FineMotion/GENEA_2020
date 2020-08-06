@@ -1,3 +1,6 @@
+seq2seq_checkpoint
+baselines
+lightning_logs
 DataProcessing/pymo
 __pycache__
 *ckpt

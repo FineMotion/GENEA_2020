@@ -1,14 +1,22 @@
-@echo off
-set MOTIONS="data\Motion"
-set FEATURES="data\Features"
-set AUDIO="data\Audio"
-set MFCC="data\MFCC"
-set READY="data\Ready"
+#@echo off
+DATA="D:/data/GENEA_2020_Data/Dataset"
+MOTIONS="$DATA/Motion"
+FEATURES="$DATA/Features"
+AUDIO="$DATA/Audio"
+MFCC="$DATA/MFCC"
+READY="$DATA/ReadyNew"
+
+source activate genea_challenge
+
+cd ./DataProcessing/
 
 echo "Generating motion features..."
-python process_motions.py --src_dir %MOTIONS% --dst_dir %FEATURES%
+python process_motions.py --src $MOTIONS --dst $FEATURES
 echo "Generating audio features..."
-python process_audio.py --src_dir %AUDIO% --dst_dir %MFCC%
+python process_audio.py --src_dir $AUDIO --dst_dir $MFCC
 echo "Aligning data..."
-python align_data.py --motion_dir %FEATURES% --audio_dir %MFCC% --dst_dir %READY% --with_context
-echo "Done. Data lies in %READY%"
+python align_data.py --motion_dir $FEATURES --audio_dir $MFCC --dst_dir $READY --with_context
+echo "Done. Data lies in $READY"
+
+# normalize
+python normalize_data.py

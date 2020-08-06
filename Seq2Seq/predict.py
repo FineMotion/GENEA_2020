@@ -5,9 +5,10 @@ import numpy as np
 from system import Seq2SeqSystem
 from dataset import Seq2SeqDataset
 
-
-system = Seq2SeqSystem.load_from_checkpoint("seq2seq_checkpoint", train_folder=None, test_folder="data/dataset/test").eval().cuda()
-dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz"), previous_poses=20, predicted_poses=50)
+import os
+test_folder = os.environ.get("TEST_FOLDER", "data/dataset/test")
+system = Seq2SeqSystem.load_from_checkpoint("seq2seq_checkpoint", train_folder=None, test_folder=test_folder).eval().cuda()
+dataset = Seq2SeqDataset(Path(test_folder).glob("*001.npz"), previous_poses=20, predicted_poses=50)  # TODO: схерали здесь такие параметры вообще? и *001.npz тоже плохую службу сослужит
 
 prev_poses = system.predicted_poses
 pred_poses = system.previous_poses
