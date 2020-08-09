@@ -19,12 +19,16 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--test-folder", type=str, default="data/dataset/test")
         parser.add_argument("--predicted-poses", type=int, default=20)
         parser.add_argument("--previous-poses", type=int, default=10)
+        parser.add_argument("--alpha", type=float, default=0.01, help="Continuity loss multiplier.")
+        parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
         return parser
 
     def __init__(
         self,
         train_folder: str,
         test_folder: str,
+        alpha: float = 0.01,
+        beta: float = 1.0,
         predicted_poses: int = 20,
         previous_poses: int = 10,
         *args,
@@ -39,17 +43,38 @@ class Seq2SeqSystem(pl.LightningModule):
         self.loss = MSELoss()
         self.train_folder = train_folder
         self.test_folder = test_folder
+        self.alpha = alpha
+        self.beta = beta
 
     def forward(self, x, p):
         output, hidden = self.encoder(x)
         predicted_poses = self.decoder(output, hidden, p)
         return predicted_poses
 
-    def calculate_loss(self, p, y):
-        mse_loss = self.loss(p, y)
-        cont_loss = torch.norm(p[1:] - p[:-1]) / (p.size(0) - 1)
-        loss = mse_loss + cont_loss * 0.01
+    def custom_loss(self, output, target):
+        output = output.transpose(0, 1)
+        target = target.transpose(0, 1)
+
+        n_element = output.numel()
+        # MSE
+        l1_loss = torch.nn.functional.l1_loss(output, target)
+
+        # continuous motion
+        diff = [abs(output[:, n, :] - output[:, n - 1, :]) for n in range(1, output.shape[1])]
+        cont_loss = torch.sum(torch.stack(diff)) / n_element
+        cont_loss *= self.alpha
+
+        # motion variance
+        norm = torch.norm(output, 2, 1)
+        var_loss = -torch.sum(norm) / n_element
+        var_loss *= self.beta
+
+        loss = l1_loss + cont_loss + var_loss
+
         return loss
+
+    def calculate_loss(self, p, y):
+        return self.custom_loss(p, y)
 
     def training_step(self, batch, batch_nb):
         x, y, p = batch

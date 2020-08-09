@@ -25,7 +25,8 @@ def main():
         mode='min',
         prefix='',
         save_top_k=-1,
-        save_last=True
+        save_last=True,
+        period=2
     )
     trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
     trainer.fit(system)
