@@ -11,6 +11,7 @@ from DataProcessing.reconstruct_data import load_mean, denormalize
 from DataProcessing.process_motions import create_bvh
 from DataProcessing.cut_bvh import main as cut_bvh
 from DataProcessing.visualization_example import main as get_mp4
+from DataProcessing.create_clip import create_clip
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,6 +58,11 @@ if __name__ == "__main__":
         default=False,
         help="Flag to apply smoothing."
         )
+    parser.add_argument(
+        "--audio",
+        type=str,
+        help="path to original audio file"
+    )
     args = parser.parse_args()
     prediction = np.load(args.pred)
     if args.smooth:
@@ -78,4 +84,7 @@ if __name__ == "__main__":
         cut_bvh(tmpdir / "pred.bvh", tmpdir / "cut_pred.bvh")
 
         logging.info("Sending to visualize")
-        get_mp4(tmpdir / "cut_pred.bvh", Path(args.dest))
+        get_mp4(tmpdir / "cut_pred.bvh", tmpdir / "video.mp4")
+
+        logging.info("Merging video and audio")
+        create_clip(tmpdir / "video.mp4", Path(args.audio), Path(args.dest))
