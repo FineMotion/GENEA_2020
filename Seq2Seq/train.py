@@ -1,22 +1,38 @@
-import torch
+from pathlib import Path
+from argparse import ArgumentParser
+
 import pytorch_lightning as pl
 
 from system import Seq2SeqSystem, AdversarialSeq2SeqSystem
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument('--train', help="train folder", default="data/dataset/train")
-parser.add_argument('--test', help='test folder', default="data/dataset/test")
 
-if __name__ == "__main__":
+def main():
+    parser = ArgumentParser()
+    parser.add_argument('--serialize-dir', type=str, required=True)
+    parser = pl.Trainer.add_argparse_args(parser)
+    parser = Seq2SeqSystem.add_model_specific_args(parser)
     args = parser.parse_args()
-    # system = Seq2SeqSystem(train_folder=args.train,
-    #                        test_folder=args.test)
+    try:
+        Path(args.serialize_dir).mkdir(parents=True)
+    except FileExistsError:
+        print(f"{args.serialize_dir} already exists, please choose another directory.")
+        return
     system = AdversarialSeq2SeqSystem(train_folder=args.train,
                                       test_folder=args.test)
-    trainer = pl.Trainer(
-        gpus=1 if torch.cuda.is_available() else 0,
-        max_epochs=50,
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        filepath=args.serialize_dir,
+        verbose=True,
+        monitor='val_loss',
+        mode='min',
+        prefix='',
+        save_top_k=-1,
+        save_last=True,
+        period=2
     )
+    trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
     trainer.fit(system)
-    trainer.save_checkpoint("./seq2seq_checkpoint")
+
+
+if __name__ == "__main__":
+    main()

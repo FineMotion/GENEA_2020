@@ -1,53 +1,38 @@
-# import torch
-# import pytorch_lightning as pl
-#
-# from system import Seq2SeqSystem
+from pathlib import Path
 from argparse import ArgumentParser
 
-parser = ArgumentParser()
-parser.add_argument('--src', help="folder with .npz X&Y", default="D:/data/GENEA_2020_Data/Dataset/split/test/data_001.npz")
-parser.add_argument('--ckpt', help='checkpoint to load', default='lightning_logs/version_4/checkpoints/epoch=46.ckpt')
-parser.add_argument('--dst', help='results', default="pred.npy")
-#
-# if __name__ == "__main__":
-#     args = parser.parse_args()
-#     system = Seq2SeqSystem(test_folder=args.test)
-#     trainer = pl.Trainer(
-#         gpus=1 if torch.cuda.is_available() else 0,
-#         max_epochs=50,
-#     )
-#     trainer.fit(system)
-#     trainer.save_checkpoint("./seq2seq_checkpoint")
+import numpy as np
 
 from system import Seq2SeqSystem
 from dataset import Seq2SeqDataset
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-system = Seq2SeqSystem()
-args = parser.parse_args()
-system = system.load_from_checkpoint(args.ckpt).eval().cuda()
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--dest", type=str, required=True)
+    args = parser.parse_args()
+    system = Seq2SeqSystem.load_from_checkpoint(args.checkpoint, train_folder=None, test_folder="data/dataset/test")
+    system = system.eval().cuda()
+    dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz"),
+                             previous_poses=system.previous_poses,
+                             predicted_poses=system.predicted_poses)
+    prev_poses = system.predicted_poses
+    pred_poses = system.previous_poses
 
-from pathlib import Path
-dataset = Seq2SeqDataset([args.src], 10, 20)
+    all_predictions = []
+    dataset_iter = iter(dataset)
 
-len(dataset.features)
-
-all_predictions = []
-real = []
-# x, y, pose =
-for sample in dataset:
-    x, y, p = sample
+    x, y, p = next(dataset_iter)
     x = x.unsqueeze(1).cuda()
-    y = y.unsqueeze(1).cuda()
     p = p.unsqueeze(1).cuda()
     pose = system(x, p)
     all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
-    real.append(y.squeeze(1).detach().cpu().numpy())
-print(len(all_predictions), len(dataset))
 
-import numpy as np
-al = np.concatenate(all_predictions, 0)
-real = np.concatenate(real, 0)
-print(al.shape, real.shape)
-np.save("../pred.npy", al)
+    for sample in dataset_iter:
+        x, _, p = sample
+        x = x.unsqueeze(1).cuda()
+        pose = system(x, pose[-pred_poses:])
+        all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
+
+    al = np.concatenate(all_predictions, 0)
+    np.save(args.dest, al)

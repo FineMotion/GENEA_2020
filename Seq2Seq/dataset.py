@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterator
 
 import numpy as np
 import torch
@@ -61,7 +61,7 @@ AVERAGE_POSE = AVERAGE_POSE[None, :]
 class Seq2SeqDataset(Dataset):
     def __init__(
         self,
-        data_files: Iterable[str],
+        data_files: Iterator[str],
         previous_poses: int = 10,
         predicted_poses: int = 20,
     ):
@@ -77,6 +77,7 @@ class Seq2SeqDataset(Dataset):
             n = X.shape[0]
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
+            # todo: add + 1 for inference
             for i in range(n // predicted_poses):
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
