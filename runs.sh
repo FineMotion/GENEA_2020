@@ -17,7 +17,7 @@ for EPOCHS in 1 5 10 20 50 100 200 400 700 1000; do
     python Seq2Seq/train.py --train-folder $TRAIN --test-folder $TEST --default_root_dir $BASELOGDIR \
             --experiment_series $EXP_SERIES --experiment_id $EXP_ID --max_epochs $EPOCHS
     TEST_FOLDER=$TEST python Seq2Seq/predict.py
-    python create_mp4.py --pred Seq2Seq/pred.npy --dest "$LOGDIR/output.mp4" --pipe DataProcessing/pipe
+    python create_mp4.py --pred ./pred.npy --dest "$LOGDIR/output.mp4" --pipe DataProcessing/pipe
 done
 #LOGDIR="$BASELOGDIR/$EXP_SERIES/$EXP_ID"
 #python Seq2Seq/train.py --train-folder $TRAIN --test-folder $TEST --default_root_dir $BASELOGDIR \

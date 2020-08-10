@@ -16,7 +16,7 @@ def int_or_str(p):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--final_ckpt_path', default=f"{os.path.dirname(os.path.abspath(__file__))}/seq2seq_checkpoint")
+    parser.add_argument('--final_ckpt_path', default=f"seq2seq_checkpoint")
     parser.add_argument('--experiment_series', help="used as version in dir name", type=str, default=None)
     parser.add_argument('--experiment_id', help="used as version in dir name", type=int_or_str, default=None)
     parser = pl.Trainer.add_argparse_args(parser)
