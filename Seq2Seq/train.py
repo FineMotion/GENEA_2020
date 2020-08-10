@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 
 import pytorch_lightning as pl
 
-from system import Seq2SeqSystem, AdversarialSeq2SeqSystem
+from system import  AdversarialSeq2SeqSystem
 from argparse import ArgumentParser
 
 
@@ -11,15 +11,14 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--serialize-dir', type=str, required=True)
     parser = pl.Trainer.add_argparse_args(parser)
-    parser = Seq2SeqSystem.add_model_specific_args(parser)
+    parser = AdversarialSeq2SeqSystem.add_model_specific_args(parser)
     args = parser.parse_args()
     try:
         Path(args.serialize_dir).mkdir(parents=True)
     except FileExistsError:
         print(f"{args.serialize_dir} already exists, please choose another directory.")
         return
-    system = AdversarialSeq2SeqSystem(train_folder=args.train,
-                                      test_folder=args.test)
+    system = AdversarialSeq2SeqSystem(**vars(args))
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         filepath=args.serialize_dir,
         verbose=True,

@@ -123,23 +123,31 @@ class Seq2SeqSystem(pl.LightningModule):
 
 class AdversarialSeq2SeqSystem(pl.LightningModule):
 
+    @staticmethod
+    def add_model_specific_args(parent_parser: ArgumentParser):
+        parser = ArgumentParser(parents=[parent_parser], add_help=False)
+        parser.add_argument("--train-folder", type=str, default="data/dataset/train")
+        parser.add_argument("--test-folder", type=str, default="data/dataset/test")
+        parser.add_argument("--predicted-poses", type=int, default=20)
+        parser.add_argument("--previous-poses", type=int, default=10)
+        parser.add_argument("--alpha", type=float, default=0.01, help="Continuity loss multiplier.")
+        parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
+        return parser
+
     def __init__(
             self,
             train_folder: str = "data/dataset/train",
             test_folder: str = "data/dataset/test",
             predicted_poses: int = 20,
-            previous_poses: int = 10
+            previous_poses: int = 10,
+            alpha: float = 0.01,
+            beta: float = 1.0,
+            adv: float = 0.01,
+            *args,
+            **kwargs
     ):
         super().__init__()
-        self.hparams = Namespace(**{
-            'prev_poses': previous_poses,
-            'pred_poses': predicted_poses,
-            'lr': 1e-3,
-            'beta1': 0.5,
-            'beta2': 0.9,
-            'w_cont_loss': 0.01,
-            'w_adv_loss': 0.01
-        })
+        self.save_hyperparameters()
         self.encoder = Encoder(26, 150, 1)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
         self.discriminator = Discriminator(45, ch_hid=100)
@@ -148,17 +156,39 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
         self.base_loss = MSELoss()
         self.train_folder = train_folder
         self.test_folder = test_folder
+        self.alpha = alpha
+        self.beta = beta
+        self.adv = adv
 
     def forward(self, x, p):
         output, hidden = self.encoder(x)
         predicted_poses = self.decoder(output, hidden, p)
         return predicted_poses
 
-    def calculate_loss(self, p, y):
-        base_loss = self.base_loss(p, y)
-        cont_loss = torch.norm(p[1:] - p[:-1]) / (p.size(0) - 1)
-        loss = base_loss + cont_loss * self.hparams.w_cont_loss
+    def custom_loss(self, output, target):
+        output = output.transpose(0, 1)
+        target = target.transpose(0, 1)
+
+        n_element = output.numel()
+        # MSE
+        l1_loss = torch.nn.functional.l1_loss(output, target)
+
+        # continuous motion
+        diff = [abs(output[:, n, :] - output[:, n - 1, :]) for n in range(1, output.shape[1])]
+        cont_loss = torch.sum(torch.stack(diff)) / n_element
+        cont_loss *= self.alpha
+
+        # motion variance
+        norm = torch.norm(output, 2, 1)
+        var_loss = -torch.sum(norm) / n_element
+        var_loss *= self.beta
+
+        loss = l1_loss + cont_loss + var_loss
+
         return loss
+
+    def calculate_loss(self, p, y):
+        return self.custom_loss(p, y)
 
     def training_step(self, batch, batch_nb, optimizer_idx):
         audio_features, real_poses, prev_poses = batch
@@ -167,14 +197,12 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
 
         # train generator
         if optimizer_idx == 0:
-            base_loss = self.base_loss(pred_poses, real_poses)
-            cont_loss = torch.norm(pred_poses[1:] - pred_poses[:-1]) / (pred_poses.size(0) - 1)
+            base_loss = self.custom_loss(pred_poses, real_poses)
 
             is_real = torch.ones((batch_size, 1)).to(pred_poses.device)
             adv_loss = F.binary_cross_entropy_with_logits(self.discriminator(pred_poses), is_real)
 
-            loss = (base_loss + self.hparams.w_cont_loss * cont_loss
-                    + self.hparams.w_adv_loss * adv_loss)
+            loss = (base_loss + self.adv * adv_loss)
             # aux metrics
             d_fake_score = F.sigmoid(self.discriminator(pred_poses)).mean()
             logs = {
@@ -182,7 +210,6 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
                 # loss components
                 'g_adv_loss': adv_loss,
                 'base_loss': base_loss,
-                'cont_loss': cont_loss,
                 # metrics
                 'd_fake_score': d_fake_score
             }
@@ -233,9 +260,9 @@ class AdversarialSeq2SeqSystem(pl.LightningModule):
         return d
 
     def configure_optimizers(self):
-        lr = self.hparams.lr
-        b1 = self.hparams.beta1
-        b2 = self.hparams.beta2
+        lr = 1e-3
+        b1 = 0.5
+        b2 = 0.9
 
         opt_g = torch.optim.Adam(list(self.encoder.parameters()) + list(self.decoder.parameters()), lr=lr, betas=(b1, b2))
         opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=lr, betas=(b1, b2))
