@@ -64,6 +64,7 @@ class Seq2SeqDataset(Dataset):
         data_files: Iterator[str],
         previous_poses: int = 10,
         predicted_poses: int = 20,
+        stride: int = 20
     ):
         self.previous_poses = previous_poses
         self.predicted_poses = predicted_poses
@@ -78,12 +79,13 @@ class Seq2SeqDataset(Dataset):
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
             # todo: add + 1 for inference
-            for i in range(n // predicted_poses):
+            strides = (n - predicted_poses + stride) // stride
+            for i in range(strides):
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
-                x = X[i * predicted_poses : (i + 1) * predicted_poses, 30]
-                y = Y[i * predicted_poses : (i + 1) * predicted_poses]
-                p = Y[i * predicted_poses - previous_poses : i * predicted_poses]
+                x = X[i * stride: i * stride + predicted_poses, 30]
+                y = Y[i * stride: i * stride + predicted_poses]
+                p = Y[i * stride - previous_poses: i * stride]
                 if len(p) == 0:
                     p = AVERAGE_POSE.repeat(self.previous_poses, 0)
                 self.features.append(x)

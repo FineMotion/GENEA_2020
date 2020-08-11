@@ -21,6 +21,8 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--previous-poses", type=int, default=10)
         parser.add_argument("--alpha", type=float, default=0.01, help="Continuity loss multiplier.")
         parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
+        parser.add_argument("--stride", type=int, default=None)
+        parser.add_argument("--batch_size", type=int, default=50)
         return parser
 
     def __init__(
@@ -31,6 +33,8 @@ class Seq2SeqSystem(pl.LightningModule):
         beta: float = 1.0,
         predicted_poses: int = 20,
         previous_poses: int = 10,
+        stride: int = None,
+        batch_size: int = 50,
         *args,
         **kwargs
     ):
@@ -45,6 +49,8 @@ class Seq2SeqSystem(pl.LightningModule):
         self.test_folder = test_folder
         self.alpha = alpha
         self.beta = beta
+        self.stride = predicted_poses if stride is None else stride
+        self.batch_size = batch_size
 
     def forward(self, x, p):
         output, hidden = self.encoder(x)
@@ -99,10 +105,10 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def train_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path(self.train_folder).glob("*.npz"), self.previous_poses, self.predicted_poses
+            Path(self.train_folder).glob("*.npz"), self.previous_poses, self.predicted_poses, self.stride
         )
         loader = DataLoader(
-            dataset, batch_size=50, shuffle=True, collate_fn=dataset.collate_fn
+            dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
         )
         return loader
 
@@ -111,8 +117,9 @@ class Seq2SeqSystem(pl.LightningModule):
             Path(self.test_folder).glob("*.npz"),
             self.previous_poses,
             self.predicted_poses,
+            self.stride
         )
         loader = DataLoader(
-            dataset, batch_size=50, shuffle=True, collate_fn=dataset.collate_fn
+            dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
         )
         return loader
