@@ -6,7 +6,8 @@ from pathlib import Path
 import numpy as np
 from scipy.signal import savgol_filter
 
-
+import sys
+sys.path.append('./DataProcessing')
 from DataProcessing.reconstruct_data import load_mean, denormalize
 from DataProcessing.process_motions import create_bvh
 from DataProcessing.cut_bvh import main as cut_bvh
