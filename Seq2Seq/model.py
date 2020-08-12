@@ -23,7 +23,7 @@ class Encoder(nn.Module):
 
         self.with_context = with_context
         if with_context:
-            self.context_gru = nn.GRU(input_dim, input_dim, 1)
+            self.context_gru = nn.GRU(input_dim, input_dim, 1, batch_first=True)
 
         self.rnn = nn.GRU(
             hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
