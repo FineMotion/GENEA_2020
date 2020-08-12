@@ -16,7 +16,8 @@ if __name__ == "__main__":
     dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz"),
                              previous_poses=system.previous_poses,
                              predicted_poses=system.predicted_poses,
-                             stride=system.predicted_poses)
+                             stride=system.predicted_poses,
+                             with_context=system.with_context)
     prev_poses = system.predicted_poses
     pred_poses = system.previous_poses
 

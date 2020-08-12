@@ -64,7 +64,8 @@ class Seq2SeqDataset(Dataset):
         data_files: Iterator[str],
         previous_poses: int = 10,
         predicted_poses: int = 20,
-        stride: int = 20
+        stride: int = 20,
+        with_context: bool = False
     ):
         self.previous_poses = previous_poses
         self.predicted_poses = predicted_poses
@@ -83,7 +84,10 @@ class Seq2SeqDataset(Dataset):
             for i in range(strides):
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
-                x = X[i * stride: i * stride + predicted_poses, 30]
+                if with_context:
+                    x = X[i * stride: i * stride + predicted_poses]
+                else:
+                    x = X[i * stride: i * stride + predicted_poses, 30]
                 y = Y[i * stride: i * stride + predicted_poses]
                 p = Y[i * stride - previous_poses: i * stride]
                 if len(p) == 0:

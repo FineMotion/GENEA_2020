@@ -2,12 +2,31 @@ import torch
 import torch.nn as nn
 
 
+class LinearWithBatchNorm(nn.Module):
+    def __init__(self, input_dim: int, output_dim: int):
+        super(LinearWithBatchNorm, self).__init__()
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.batch_norm = nn.BatchNorm1d(61)
+        self.dropout = nn.Dropout(0.1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.linear(x)
+        x = self.batch_norm(x)
+        x = torch.relu(x)
+        x = self.dropout(x)
+        return x
+
+
 class Encoder(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1):
+    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1, with_context: bool = False):
         super().__init__()
 
+        self.with_context = with_context
+        if with_context:
+            self.context_gru = nn.GRU(input_dim, input_dim, 1)
+
         self.rnn = nn.GRU(
-            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
         )
         self.highway = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -20,8 +39,14 @@ class Encoder(nn.Module):
         self.num_layers = num_layers
 
     def forward(self, x):
-        seq_len, batch, input_dim = x.shape
         # x - [seq_len, batch, input_dim]
+        if self.with_context:
+            seq_len, batch, context, input_dim = x.shape
+            x = x.reshape(seq_len*batch, context, input_dim)  # batch*seq_len, context, input_dim
+            x = self.context_gru(x)[0][:, -1, :]  # batch*seq_len, input_dim
+            x = x.reshape(seq_len, batch, input_dim)  # seq_len, batch, input
+
+        # seq_len, batch, input
         x = self.highway(x)
         output, hidden = self.rnn(x)
         # output - seq_len, batch, num_directions * hidden_size

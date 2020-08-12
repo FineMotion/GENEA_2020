@@ -23,6 +23,7 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
         parser.add_argument("--stride", type=int, default=None)
         parser.add_argument("--batch_size", type=int, default=50)
+        parser.add_argument("--with_context", action="store_true", default=False)
         return parser
 
     def __init__(
@@ -35,12 +36,13 @@ class Seq2SeqSystem(pl.LightningModule):
         previous_poses: int = 10,
         stride: int = None,
         batch_size: int = 50,
+        with_context: bool = False,
         *args,
         **kwargs
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.encoder = Encoder(26, 150, 1)
+        self.encoder = Encoder(26, 150, 1, with_context)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
         self.predicted_poses = predicted_poses
         self.previous_poses = previous_poses
@@ -51,6 +53,7 @@ class Seq2SeqSystem(pl.LightningModule):
         self.beta = beta
         self.stride = predicted_poses if stride is None else stride
         self.batch_size = batch_size
+        self.with_context = with_context
 
     def forward(self, x, p):
         output, hidden = self.encoder(x)
@@ -105,7 +108,11 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def train_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path(self.train_folder).glob("*.npz"), self.previous_poses, self.predicted_poses, self.stride
+            Path(self.train_folder).glob("*.npz"),
+            self.previous_poses,
+            self.predicted_poses,
+            self.stride,
+            self.with_context
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
@@ -117,7 +124,8 @@ class Seq2SeqSystem(pl.LightningModule):
             Path(self.test_folder).glob("*.npz"),
             self.previous_poses,
             self.predicted_poses,
-            self.stride
+            self.stride,
+            self.with_context
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
