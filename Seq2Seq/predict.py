@@ -17,23 +17,27 @@ if __name__ == "__main__":
                              previous_poses=system.previous_poses,
                              predicted_poses=system.predicted_poses,
                              stride=system.predicted_poses,
-                             with_context=system.with_context)
+                             with_context=system.with_context,
+                             text_folder="data/Transcripts",
+                             vocab=system.vocab)
     prev_poses = system.predicted_poses
     pred_poses = system.previous_poses
 
     all_predictions = []
     dataset_iter = iter(dataset)
 
-    x, y, p = next(dataset_iter)
+    x, y, p, w = next(dataset_iter)
     x = x.unsqueeze(1).cuda()
     p = p.unsqueeze(1).cuda()
-    pose = system(x, p)
+    w = w.unsqueeze(1).cuda()
+    pose = system(x, p, w)
     all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
 
     for sample in dataset_iter:
-        x, _, p = sample
+        x, _, p, w = sample
         x = x.unsqueeze(1).cuda()
-        pose = system(x, pose[-pred_poses:])
+        w = w.unsqueeze(1).cuda()
+        pose = system(x, pose[-pred_poses:], w)
         all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
 
     al = np.concatenate(all_predictions, 0)
