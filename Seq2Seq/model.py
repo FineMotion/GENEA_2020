@@ -26,7 +26,7 @@ class Encoder(nn.Module):
             self.context_gru = nn.GRU(input_dim, input_dim, 1, batch_first=True)
 
         self.rnn = nn.GRU(
-            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False, dropout=0.2
         )
         self.highway = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -85,6 +85,7 @@ class Decoder(nn.Module):
         self, output_dim: int, hidden_dim: int, enc_dim: int, max_gen: int = 20
     ):
         super().__init__()
+        self.dropout = nn.Dropout(0.5)
         self.enc_dec_linear = nn.Linear(enc_dim, hidden_dim)
         self.rnn = nn.GRU(output_dim, hidden_dim)
         self.linear = nn.Linear(hidden_dim * 3, output_dim)
@@ -134,6 +135,7 @@ class Decoder(nn.Module):
             attention = self.attention(encoder_states, dec_hidden)
             word_attention = self.word_attention(words, dec_hidden)
             concat = torch.cat((dec_hidden, attention, word_attention), dim=2)
+            concat = self.dropout(concat)
             # concat - 1, batch, hidden_dim * 2
             start_pose = self.linear(concat)
             # start_pose - 1, batch, output_dim
