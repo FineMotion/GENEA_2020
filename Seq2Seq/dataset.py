@@ -1,8 +1,14 @@
-from typing import Iterator
+from typing import Iterator, List
+from pathlib import Path
+import json
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
+
+from DataProcessing.text_utils import parse_transcripts
+
 
 AVERAGE_POSE = np.array(
     [
@@ -57,6 +63,26 @@ AVERAGE_POSE = np.array(
 AVERAGE_POSE = AVERAGE_POSE[None, :]
 # AVERAGE_POSE - 1, output_dim
 
+class Vocab:
+
+    def __init__(self, embedding_file: str = "embeddings/glove.6B.100d.txt"):
+        self.weights = []
+        self.token_to_idx = {}
+        self.idx_to_token = {}
+        for line in tqdm(open(embedding_file)):
+            arr = line.strip().split()
+            word = arr[0]
+            vec = arr[1:]
+            self.token_to_idx[word] = len(self.token_to_idx)
+            self.idx_to_token[len(self.idx_to_token)] = word
+            self.weights.append(vec)
+
+    def words_to_idx(self, words: List[str]) -> List[int]:
+        # lower is important
+        # there is not unk, so we return 0 as 'the'
+        return [self.token_to_idx.get(word.lower(), 0) for word in words]
+
+
 
 class Seq2SeqDataset(Dataset):
     def __init__(
@@ -65,23 +91,50 @@ class Seq2SeqDataset(Dataset):
         previous_poses: int = 10,
         predicted_poses: int = 20,
         stride: int = 20,
-        with_context: bool = False
+        with_context: bool = False,
+        text_folder: str = None,
+        vocab: Vocab = None
     ):
         self.previous_poses = previous_poses
         self.predicted_poses = predicted_poses
         self.features = []
         self.poses = []
         self.prev_poses = []
+        self.vocab = vocab
+        self.words = None
+        if vocab:
+            self.words = []
+
+        if text_folder:
+            text_folder = Path(text_folder)
         for file in data_files:
             data = np.load(file)
             X = data["X"]
             Y = data["Y"]
+            words = None
+            if text_folder is not None:
+                filename = file.name.split(".")[0]
+                filenumber = filename[-3:]
+                text_file = text_folder / f"Recording_{filenumber}.json"
+                words = json.load(text_file.read_text())['alternatives'][0]
+                words = [(word['word'], float(word['start_time'][-1:]), float(word['end_time'][:-1]))
+                         for word in words]
             n = X.shape[0]
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
             # todo: add + 1 for inference
             strides = (n - predicted_poses + stride) // stride
             for i in range(strides):
+                # time in seconds, add 2 seconds
+                cur_words = None
+                if words is not None:
+                    start = (i * stride) / 20 - 2
+                    end = (i * stride + predicted_poses) / 20 + 2
+                    cur_words = filter(lambda x: x[1] >= start and x[2] <= end, words)
+                    cur_words = [x[0] for x in cur_words]
+                    cur_words = vocab.words_to_idx(cur_words)
+                    self.words.append(cur_words)
+
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
                 if with_context:
@@ -103,10 +156,20 @@ class Seq2SeqDataset(Dataset):
         x = torch.FloatTensor(self.features[index])
         y = torch.FloatTensor(self.poses[index])
         p = torch.FloatTensor(self.prev_poses[index])
+        if self.words is not None:
+            w = torch.LongTensor(self.words[index])
+            return x, y, p, w
         return x, y, p
 
     @staticmethod
     def collate_fn(batch):
+        if len(batch) == 4:
+            x, y, p, w = list(zip(*batch))
+            X = torch.stack(x, dim=1)
+            Y = torch.stack(y, dim=1)
+            P = torch.stack(p, dim=1)
+            W = torch.stack(w, dim=1)
+            return X, Y, P, W
         x, y, p = list(zip(*batch))
         X = torch.stack(x, dim=1)
         Y = torch.stack(y, dim=1)

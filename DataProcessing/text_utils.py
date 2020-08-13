@@ -43,6 +43,6 @@ def parse_transcripts(json_path: str) -> TokenContainer:
 
 
 if __name__ == '__main__':
-    container = parse_transcripts(r'..\data\Transcripts\Recording_001.json')
+    container = parse_transcripts(r'../data/Transcripts/Recording_001.json')
     for token in container[100]:
         print(token)

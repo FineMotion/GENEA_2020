@@ -87,11 +87,12 @@ class Decoder(nn.Module):
         super().__init__()
         self.enc_dec_linear = nn.Linear(enc_dim, hidden_dim)
         self.rnn = nn.GRU(output_dim, hidden_dim)
-        self.linear = nn.Linear(hidden_dim * 2, output_dim)
+        self.linear = nn.Linear(hidden_dim * 3, output_dim)
         self.max_gen = max_gen
         self.output_dim = output_dim
         self.attention = Attention(enc_dim, hidden_dim)
         self.hidden_dim = hidden_dim
+        self.word_attention = Attention(200, hidden_dim)
 
     def forward(
         self,
@@ -99,6 +100,7 @@ class Decoder(nn.Module):
         encoder_hidden,
         previous_poses=None,
         real_poses_len: int = None,
+        words: torch.Tensor = None
     ):
         # encoder_states - seq_len, batch, enc_dim
         # encoder_hidden - num_layers * num_directions, batch, enc_hidden
@@ -130,7 +132,8 @@ class Decoder(nn.Module):
         for i in range(max_gen_len):
             output, dec_hidden = self.rnn(start_pose, dec_hidden)
             attention = self.attention(encoder_states, dec_hidden)
-            concat = torch.cat((dec_hidden, attention), dim=2)
+            word_attention = self.word_attention(words, dec_hidden)
+            concat = torch.cat((dec_hidden, attention, word_attention), dim=2)
             # concat - 1, batch, hidden_dim * 2
             start_pose = self.linear(concat)
             # start_pose - 1, batch, output_dim
