@@ -7,7 +7,6 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from DataProcessing.text_utils import parse_transcripts
 
 
 AVERAGE_POSE = np.array(
