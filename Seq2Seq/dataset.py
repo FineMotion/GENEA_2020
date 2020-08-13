@@ -71,7 +71,7 @@ class Vocab:
         for line in tqdm(open(embedding_file)):
             arr = line.strip().split()
             word = arr[0]
-            vec = map(float, arr[1:])
+            vec = list(map(float, arr[1:]))
             self.token_to_idx[word] = len(self.token_to_idx)
             self.idx_to_token[len(self.idx_to_token)] = word
             self.weights.append(vec)
