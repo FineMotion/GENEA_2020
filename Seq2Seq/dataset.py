@@ -115,7 +115,7 @@ class Seq2SeqDataset(Dataset):
                 filename = file.name.split(".")[0]
                 filenumber = filename[-3:]
                 text_file = text_folder / f"Recording_{filenumber}.json"
-                words = json.load(text_file.read_text())['alternatives'][0]
+                words = json.loads(text_file.read_text())['alternatives'][0]
                 words = [(word['word'], float(word['start_time'][-1:]), float(word['end_time'][:-1]))
                          for word in words]
             n = X.shape[0]
