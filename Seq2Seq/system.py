@@ -70,7 +70,7 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def forward(self, x, p, w):
         words = self.word_embedder(w)
-        words = self.word_encoder(words)
+        words, _ = self.word_encoder(words)
         output, hidden = self.encoder(x)
         predicted_poses = self.decoder(output, hidden, p, words=words)
         return predicted_poses
@@ -101,14 +101,14 @@ class Seq2SeqSystem(pl.LightningModule):
         return self.custom_loss(p, y)
 
     def training_step(self, batch, batch_nb):
-        x, y, p = batch
-        pred_poses = self.forward(x, p)
+        x, y, p, w = batch
+        pred_poses = self.forward(x, p, w)
         loss = self.calculate_loss(pred_poses, y)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_nb):
-        x, y, p = batch
-        pred_poses = self.forward(x, p)
+        x, y, p, w = batch
+        pred_poses = self.forward(x, p, w)
         loss = self.calculate_loss(pred_poses, y)
         return {"loss": loss}
 

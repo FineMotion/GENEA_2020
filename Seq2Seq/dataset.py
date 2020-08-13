@@ -4,6 +4,7 @@ import json
 
 import numpy as np
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -115,9 +116,13 @@ class Seq2SeqDataset(Dataset):
                 filename = file.name.split(".")[0]
                 filenumber = filename[-3:]
                 text_file = text_folder / f"Recording_{filenumber}.json"
-                words = json.loads(text_file.read_text())['alternatives'][0]['words']
-                words = [(word['word'], float(word['start_time'][-1:]), float(word['end_time'][:-1]))
-                         for word in words]
+                recording = json.loads(text_file.read_text())
+                words = []
+                for frame in recording:
+                    frame_words = frame['alternatives'][0]['words']
+                    words += [(word['word'], float(word['start_time'][:-1]), float(word['end_time'][:-1]))
+                         for word in frame_words]
+
             n = X.shape[0]
             assert X.shape[0] == Y.shape[0]
             # x - N, 61, 26
@@ -162,12 +167,13 @@ class Seq2SeqDataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        if len(batch) == 4:
+        if len(batch[0]) == 4:
             x, y, p, w = list(zip(*batch))
             X = torch.stack(x, dim=1)
             Y = torch.stack(y, dim=1)
             P = torch.stack(p, dim=1)
-            W = torch.stack(w, dim=1)
+            W = pad_sequence(w)
+            # W = torch.stack(w, dim=1)
             return X, Y, P, W
         x, y, p = list(zip(*batch))
         X = torch.stack(x, dim=1)
