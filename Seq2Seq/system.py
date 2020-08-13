@@ -6,7 +6,7 @@ import torch
 from torch.nn import MSELoss
 from torch.utils.data import DataLoader
 
-from model import Encoder, Decoder
+from model import Encoder, Decoder, ContextEncoder
 from dataset import Seq2SeqDataset
 
 
@@ -42,7 +42,10 @@ class Seq2SeqSystem(pl.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.encoder = Encoder(26, 150, 1, with_context)
+        if with_context:
+            self.encoder = ContextEncoder(26, 150, 1)
+        else:
+            self.encoder = Encoder(26, 150, 1, with_context)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
         self.predicted_poses = predicted_poses
         self.previous_poses = previous_poses

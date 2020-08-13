@@ -9,6 +9,7 @@ from system import Seq2SeqSystem
 def main():
     parser = ArgumentParser()
     parser.add_argument('--serialize-dir', type=str, required=True)
+    # parser.add_argument("--checkpoint", type=str, required=True)
     parser = pl.Trainer.add_argparse_args(parser)
     parser = Seq2SeqSystem.add_model_specific_args(parser)
     args = parser.parse_args()
@@ -29,6 +30,7 @@ def main():
         period=2
     )
     trainer = pl.Trainer.from_argparse_args(args, checkpoint_callback=checkpoint_callback)
+    # system = Seq2SeqSystem.load_from_checkpoint(args.checkpoint)
     trainer.fit(system)
 
 

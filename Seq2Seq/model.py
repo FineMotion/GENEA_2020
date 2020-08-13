@@ -17,6 +17,35 @@ class LinearWithBatchNorm(nn.Module):
         return x
 
 
+class ContextEncoder(nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1):
+        super().__init__()
+        self.context_highway = nn.Sequential(
+            LinearWithBatchNorm(input_dim, hidden_dim),
+            LinearWithBatchNorm(hidden_dim, hidden_dim),
+            LinearWithBatchNorm(hidden_dim, hidden_dim)
+        )
+        self.context_gru = nn.GRU(hidden_dim, hidden_dim, 1, batch_first=True)
+        self.batch_norm = nn.BatchNorm1d(hidden_dim)
+        self.dropout = nn.Dropout(0.1)
+        self.rnn = nn.GRU(
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
+        )
+        self.hidden_dim = hidden_dim
+
+    def forward(self, x):
+        seq_len, batch, context, input_dim = x.shape
+        x = x.reshape(seq_len * batch, context, input_dim)  # batch*seq_len, context, input_dim
+        x = self.context_highway(x)  # batch*seq_len, context, hidden_dim
+        x = self.context_gru(x)[0][:, -1, :]  # batch*seq_len, hidden_dim
+        x = self.batch_norm(x)
+        x = torch.relu(x)
+
+        x = x.reshape(seq_len, batch, self.hidden_dim)  # seq_len, batch, hidden_dim
+        output, hidden = self.rnn(x)
+        return self.dropout(output), self.dropout(hidden)
+
+
 class Encoder(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1, with_context: bool = False):
         super().__init__()

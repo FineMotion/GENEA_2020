@@ -2,6 +2,8 @@ from pathlib import Path
 from argparse import ArgumentParser
 
 import numpy as np
+import torch
+from tqdm import tqdm
 
 from system import Seq2SeqSystem
 from dataset import Seq2SeqDataset
@@ -24,17 +26,19 @@ if __name__ == "__main__":
     all_predictions = []
     dataset_iter = iter(dataset)
 
-    x, y, p = next(dataset_iter)
-    x = x.unsqueeze(1).cuda()
-    p = p.unsqueeze(1).cuda()
-    pose = system(x, p)
-    all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
-
-    for sample in dataset_iter:
-        x, _, p = sample
+    with torch.no_grad():
+        x, y, p = next(dataset_iter)
         x = x.unsqueeze(1).cuda()
-        pose = system(x, pose[-pred_poses:])
+        p = p.unsqueeze(1).cuda()
+        pose = system(x, p)
         all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
+
+        for sample in tqdm(dataset_iter):
+            x, _, p = sample
+            x = x.unsqueeze(1).cuda()
+            pose = system(x, pose[-pred_poses:])
+            all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
+            x
 
     al = np.concatenate(all_predictions, 0)
     np.save(args.dest, al)
