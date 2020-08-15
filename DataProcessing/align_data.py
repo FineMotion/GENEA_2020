@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 import logging
 from os import listdir, mkdir
-from os.path import join, exists
+from os.path import join, exists, split
 import numpy as np
 
 from audio_utils import calculate_mfcc
@@ -28,6 +28,19 @@ class DataAligner:
         result = np.append(result, paddings, axis=0)
         return result
 
+    def contextualize(self, audio_data: np.ndarray):
+        strides = len(audio_data)
+        audio_data = self.pad_audio(audio_data)
+        logging.debug(f"Padded audio shape: {audio_data.shape}")
+        audio_with_context = []
+        # audio_data[0: self.context_length + 1].reshape(1, self.context_length + 1, -1)
+        logging.debug(f"Strides: {strides}")
+        for i in range(strides):
+            audio_with_context.append(audio_data[i:i + self.context_length + 1])
+        audio_with_context = np.array(audio_with_context)
+        logging.debug(f"Output audio shape: {audio_with_context.shape}")
+        return audio_with_context
+
     def align_recording(self, audio_file: str, motion_file: str):
         assert exists(audio_file) and exists(motion_file)
         audio_data = np.load(audio_file)
@@ -40,16 +53,8 @@ class DataAligner:
             return audio_data, motion_data
 
         # convert audio data with context
-        strides = len(audio_data)
-        audio_data = self.pad_audio(audio_data)
-        logging.debug(f"Padded audio shape: {audio_data.shape}")
-        audio_with_context = []
-        # audio_data[0: self.context_length + 1].reshape(1, self.context_length + 1, -1)
-        logging.debug(f"Strides: {strides}")
-        for i in range(strides):
-            audio_with_context.append(audio_data[i:i + self.context_length + 1])
-        audio_with_context = np.array(audio_with_context)
-        logging.debug(f"Output audio shape: {audio_with_context.shape}\tOutput motion shape: {motion_data.shape}")
+        audio_with_context = self.contextualize(audio_data)
+
         return audio_with_context, motion_data
 
     def align(self, dst_dir: str):
@@ -60,16 +65,20 @@ class DataAligner:
             logging.info(recording)
             # audio and motion files have the same names
             audio_file = join(self.audio_dir, recording)
-            motion_file = join(self.motion_dir, recording)
-            audio_data, motion_data = self.align_recording(audio_file, motion_file)
-            print(audio_data.shape, motion_data.shape)
-            np.savez(join(dst_dir, "data_%03d.npz" % (i + 1)), X=audio_data, Y=motion_data)
+            if self.motion_dir is not None:
+                motion_file = join(self.motion_dir, recording)
+                audio_data, motion_data = self.align_recording(audio_file, motion_file)
+                np.savez(join(dst_dir, "data_%03d.npz" % (i + 1)), X=audio_data, Y=motion_data)
+            else:
+                audio_data = self.contextualize(np.load(audio_file))
+                print(audio_data.shape)
+                np.save(join(dst_dir, split(audio_file)[-1]), audio_data)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--motion_dir', help='Path to motion features folder')
+    arg_parser.add_argument('--motion_dir', type=str, default=None, help='Path to motion features folder')
     arg_parser.add_argument('--audio_dir', help='Path to audio features folder')
     arg_parser.add_argument('--dst_dir', help='Path where aligned data will be stored')
     arg_parser.add_argument('--with_context', action="store_true", help='Set use audio data with context or not')

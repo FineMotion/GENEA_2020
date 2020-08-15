@@ -3,11 +3,13 @@ from argparse import ArgumentParser
 
 import pytorch_lightning as pl
 import torch
+from torch import nn
 from torch.nn import MSELoss
 from torch.utils.data import DataLoader
 
 from model import Encoder, Decoder, ContextEncoder
 from dataset import Seq2SeqDataset
+from text import Vocab
 
 
 class Seq2SeqSystem(pl.LightningModule):
@@ -24,6 +26,8 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--stride", type=int, default=None)
         parser.add_argument("--batch_size", type=int, default=50)
         parser.add_argument("--with_context", action="store_true", default=False)
+        parser.add_argument("--embedding", type=str, default=None)
+        parser.add_argument("--text_folder", type=str, default=None)
         return parser
 
     def __init__(
@@ -37,6 +41,8 @@ class Seq2SeqSystem(pl.LightningModule):
         stride: int = None,
         batch_size: int = 50,
         with_context: bool = False,
+        embedding: str = None,
+        text_folder: str = None,
         *args,
         **kwargs
     ):
@@ -57,9 +63,17 @@ class Seq2SeqSystem(pl.LightningModule):
         self.stride = predicted_poses if stride is None else stride
         self.batch_size = batch_size
         self.with_context = with_context
+        if embedding is not None:
+            self.vocab = Vocab(embedding)
+            self.embedder = nn.Embedding(len(self.vocab.token_to_idx), len(self.vocab.weights[0]),
+                                              _weight=torch.FloatTensor(self.vocab.weights))
+        else:
+            self.vocab = None
+        self.text_folder = text_folder
 
-    def forward(self, x, p):
-        output, hidden = self.encoder(x)
+    def forward(self, x, p, w):
+        w = self.embedder(w)
+        output, hidden = self.encoder(x, w)
         predicted_poses = self.decoder(output, hidden, p)
         return predicted_poses
 
@@ -89,14 +103,14 @@ class Seq2SeqSystem(pl.LightningModule):
         return self.custom_loss(p, y)
 
     def training_step(self, batch, batch_nb):
-        x, y, p = batch
-        pred_poses = self.forward(x, p)
+        x, y, p, w = batch
+        pred_poses = self.forward(x, p, w)
         loss = self.calculate_loss(pred_poses, y)
         return {"loss": loss}
 
     def validation_step(self, batch, batch_nb):
-        x, y, p = batch
-        pred_poses = self.forward(x, p)
+        x, y, p, w = batch
+        pred_poses = self.forward(x, p, w)
         loss = self.calculate_loss(pred_poses, y)
         return {"loss": loss}
 
@@ -115,7 +129,9 @@ class Seq2SeqSystem(pl.LightningModule):
             self.previous_poses,
             self.predicted_poses,
             self.stride,
-            self.with_context
+            self.with_context,
+            self.text_folder,
+            self.vocab
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
@@ -128,7 +144,9 @@ class Seq2SeqSystem(pl.LightningModule):
             self.previous_poses,
             self.predicted_poses,
             self.stride,
-            self.with_context
+            self.with_context,
+            self.text_folder,
+            self.vocab
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn

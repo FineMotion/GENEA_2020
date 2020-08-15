@@ -33,7 +33,10 @@ class ContextEncoder(nn.Module):
         )
         self.hidden_dim = hidden_dim
 
-    def forward(self, x):
+        self.words_gru = nn.GRU(100, 100, 1, batch_first=True, bidirectional=True)
+        self.merge_layer = nn.Linear(hidden_dim + 200, hidden_dim)
+
+    def forward(self, x, w):
         seq_len, batch, context, input_dim = x.shape
         x = x.reshape(seq_len * batch, context, input_dim)  # batch*seq_len, context, input_dim
         x = self.context_highway(x)  # batch*seq_len, context, hidden_dim
@@ -41,7 +44,17 @@ class ContextEncoder(nn.Module):
         x = self.batch_norm(x)
         x = torch.relu(x)
 
+        _, _, words_count, embedding = w.shape
+        w = w.reshape(seq_len * batch, words_count, embedding)
+        w = self.words_gru(w)[0][:, -1, :]  # batch*seq_len, words_hidden
+        w = torch.relu(w)
+
         x = x.reshape(seq_len, batch, self.hidden_dim)  # seq_len, batch, hidden_dim
+        w = w.reshape(seq_len, batch, 200)  # seq_len, batch, words_hidden
+
+        x = torch.cat((x, w), dim=2)
+        x = self.merge_layer(x)  # seq_len, batch, hidden_dim
+
         output, hidden = self.rnn(x)
         return self.dropout(output), self.dropout(hidden)
 

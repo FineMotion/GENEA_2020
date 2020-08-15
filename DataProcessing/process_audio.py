@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from os import mkdir, listdir
 from os.path import exists, splitext, join
 
-from .audio_utils import calculate_mfcc
+from audio_utils import calculate_mfcc
 
 
 def process_folder(src_dir: str, dst_dir: str):

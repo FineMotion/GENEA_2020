@@ -10,7 +10,8 @@ def create_clip(video_path: Union[str, WindowsPath],
                 dest: Union[str, WindowsPath]):
 
     video = VideoFileClip(str(video_path))
-    audio = AudioFileClip(str(audio_path)).subclip(0, 60)
+    audio = AudioFileClip(str(audio_path))
+        # .subclip(0, 60)
     result = video.set_audio(audio)
     result.write_videofile(str(dest))
 
