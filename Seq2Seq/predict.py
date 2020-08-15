@@ -12,10 +12,11 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--dest", type=str, required=True)
+    parser.add_argument("--src", type=str, default=None)
     args = parser.parse_args()
-    system = Seq2SeqSystem.load_from_checkpoint(args.checkpoint, train_folder=None, test_folder="data/dataset/test")
+    system = Seq2SeqSystem.load_from_checkpoint(args.checkpoint)
     system = system.eval().cuda()
-    dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz"),
+    dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz") if args.src is None else [Path(args.src)],
                              previous_poses=system.previous_poses,
                              predicted_poses=system.predicted_poses,
                              stride=system.predicted_poses,
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     dataset_iter = iter(dataset)
 
     with torch.no_grad():
-        x, y, p = next(dataset_iter)
+        x, _, p = next(dataset_iter)
         x = x.unsqueeze(1).cuda()
         p = p.unsqueeze(1).cuda()
         pose = system(x, p)
@@ -38,7 +39,8 @@ if __name__ == "__main__":
             x = x.unsqueeze(1).cuda()
             pose = system(x, pose[-pred_poses:])
             all_predictions.append(pose.squeeze(1).detach().cpu().numpy())
-            x
 
     al = np.concatenate(all_predictions, 0)
+    print(al.shape)
+    print(len(dataset))
     np.save(args.dest, al)

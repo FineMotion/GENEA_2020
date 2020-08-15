@@ -74,10 +74,14 @@ class Seq2SeqDataset(Dataset):
         self.prev_poses = []
         for file in data_files:
             data = np.load(file)
-            X = data["X"]
-            Y = data["Y"]
+            if str(file).endswith('npy'):
+                X = data
+                Y = None
+            else:
+                X = data["X"]
+                Y = data["Y"]
             n = X.shape[0]
-            assert X.shape[0] == Y.shape[0]
+            assert Y is None or X.shape[0] == Y.shape[0]
             # x - N, 61, 26
             # todo: add + 1 for inference
             strides = (n - predicted_poses + stride) // stride
@@ -88,10 +92,12 @@ class Seq2SeqDataset(Dataset):
                     x = X[i * stride: i * stride + predicted_poses]
                 else:
                     x = X[i * stride: i * stride + predicted_poses, 30]
-                y = Y[i * stride: i * stride + predicted_poses]
-                p = Y[i * stride - previous_poses: i * stride]
-                if len(p) == 0:
+                y = Y[i * stride: i * stride + predicted_poses] if Y is not None else None
+                p = Y[i * stride - previous_poses: i * stride] if Y is not None else None
+                if p is None or len(p) == 0:
                     p = AVERAGE_POSE.repeat(self.previous_poses, 0)
+                if y is None:
+                    y = AVERAGE_POSE.repeat(self.predicted_poses, 0)
                 self.features.append(x)
                 self.poses.append(y)
                 self.prev_poses.append(p)
