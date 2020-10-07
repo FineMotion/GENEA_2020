@@ -5,12 +5,13 @@ import math
 
 
 class MotionTrainer:
-    def __init__(self, train_iterator: DataLoader, test_iterator: DataLoader, model: nn.Module, model_name='best.pt'):
+    def __init__(self, train_iterator: DataLoader, test_iterator: DataLoader, model: nn.Module, model_name='best.pt',
+                 criterion=nn.MSELoss()):
         self.model = model
         self.optimizer = torch.optim.Adam(model.parameters(), lr=0.0003, betas=(0.9, 0.999))
         self.train_iterator = train_iterator
         self.test_iterator = test_iterator
-        self.criterion = nn.MSELoss()
+        self.criterion = criterion
         self.best_loss = math.inf
         self.model_name = model_name
         self.best_epoch = 0

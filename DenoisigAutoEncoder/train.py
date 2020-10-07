@@ -4,14 +4,13 @@ import numpy as np
 from os import listdir
 from os.path import join
 
-from dataset import  NoisedMotionDataset
-from model import DenoisingAutoEncoder
+from dae import DenoisingAutoEncoder
 
 import sys
 sys.path.append('../tools')
 from trainer import MotionTrainer
 from normalization import create_motion_array, get_normalization_values, normalize_data
-
+from datasets import MotionDataset
 
 if __name__ == "__main__":
     device = torch.device('cuda')
@@ -25,12 +24,12 @@ if __name__ == "__main__":
     test_normalized = normalize_data(test_array, max_val, mean_pose)
 
     sigma = np.std(train_normalized, axis=(0, 1))
-    train_dataset = NoisedMotionDataset(train_normalized, device, sigma)
+    train_dataset = MotionDataset(train_normalized, device, sigma)
     train_sampler = RandomSampler(train_dataset)
     train_iterator = DataLoader(train_dataset, batch_size=256, sampler=train_sampler,
                                 collate_fn=train_dataset.collate_fn)
 
-    test_dataset = NoisedMotionDataset(test_normalized, device, sigma)
+    test_dataset = MotionDataset(test_normalized, device, sigma)
     test_sampler = RandomSampler(test_dataset)
     test_iterator = DataLoader(test_dataset, batch_size=256, sampler=test_sampler,
                                collate_fn=test_dataset.collate_fn)
