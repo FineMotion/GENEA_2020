@@ -50,7 +50,6 @@ def process_folder(src_dir: str, dst_dir: str, pipeline_dir: str, fps: int = 20)
         name, _ = splitext(bvh_name)
         logging.info(name)
         np.save(join(dst_dir, name + ".npy"), out_data[i])
-        # np.savez(join(dst_dir, name + "_mirrored.npz"), clips=out_data[len(bvh_names) + i])
 
 
 def create_bvh(src: str, dst: str, pipeline_dir: str):

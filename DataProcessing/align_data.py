@@ -1,9 +1,8 @@
 from argparse import ArgumentParser
 import logging
 from os import listdir, mkdir
-from os.path import join, exists, split
+from os.path import join, exists, split, dirname, abspath
 import numpy as np
-
 from audio_utils import calculate_mfcc
 
 
@@ -22,7 +21,8 @@ class DataAligner:
         return arr1, arr2
 
     def pad_audio(self, audio_data):
-        silence = calculate_mfcc("silence.wav")
+        silence_path = join(dirname(abspath(__file__)), "silence.wav")
+        silence = calculate_mfcc(silence_path)
         paddings = np.array([silence[0]] * (self.context_length // 2))
         result = np.append(paddings, audio_data, axis=0)
         result = np.append(result, paddings, axis=0)
