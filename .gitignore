@@ -9,3 +9,4 @@ DataProcessing/pipe
 *.npy
 *.npz
 *.mp4
+/DataProcessing/pymo/mocapplayer/
