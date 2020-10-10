@@ -1,8 +1,13 @@
-from typing import Iterable
+import json
+from pathlib import Path
+from typing import Iterator, NamedTuple
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torch.nn.utils.rnn import pad_sequence
+
+from text import Vocab, parse_transcripts, TokenContainer, pad_matrix
 
 AVERAGE_POSE = np.array(
     [
@@ -61,30 +66,63 @@ AVERAGE_POSE = AVERAGE_POSE[None, :]
 class Seq2SeqDataset(Dataset):
     def __init__(
         self,
-        data_files: Iterable[str],
+        data_files: Iterator[str],
         previous_poses: int = 10,
         predicted_poses: int = 20,
+        stride: int = 20,
+        with_context: bool = False,
+        text_folder: str = None,
+        vocab: Vocab = None
     ):
         self.previous_poses = previous_poses
         self.predicted_poses = predicted_poses
         self.features = []
         self.poses = []
         self.prev_poses = []
+        self.words = None
+        if vocab:
+            self.words = []
+
+        if text_folder:
+            text_folder = Path(text_folder)
+
         for file in data_files:
             data = np.load(file)
-            X = data["X"]
-            Y = data["Y"]
+            if str(file).endswith('npy'):
+                X = data
+                Y = None
+            else:
+                X = data["X"]
+                Y = data["Y"]
             n = X.shape[0]
-            assert X.shape[0] == Y.shape[0]
+
+            token_container = None  # type: TokenContainer
+            if text_folder is not None:
+                filename = file.name.split(".")[0]
+                filenumber = filename[-3:]
+                text_file = text_folder / f"Recording_{filenumber}.json"
+                token_container = parse_transcripts(text_file, vocab)
+
+            assert Y is None or X.shape[0] == Y.shape[0]
             # x - N, 61, 26
-            for i in range(n // predicted_poses):
+            # todo: add + 1 for inference
+            strides = (n - predicted_poses + stride) // stride
+            for i in range(strides):
                 # we have features and poses from i...i + predicted_poses
                 # we have previous poses from i + predicted_poses - previous_states ... i + predicted_staes
-                x = X[i * predicted_poses : (i + 1) * predicted_poses, 30]
-                y = Y[i * predicted_poses : (i + 1) * predicted_poses]
-                p = Y[i * predicted_poses - previous_poses : i * predicted_poses]
-                if len(p) == 0:
+                if token_container:
+                    w = token_container[i * stride: i * stride + predicted_poses]  # [predicted_poses, words_count*]
+                    self.words.append(w)
+                if with_context:
+                    x = X[i * stride: i * stride + predicted_poses]
+                else:
+                    x = X[i * stride: i * stride + predicted_poses, 30]
+                y = Y[i * stride: i * stride + predicted_poses] if Y is not None else None
+                p = Y[i * stride - previous_poses: i * stride] if Y is not None else None
+                if  p is None or len(p) == 0:
                     p = AVERAGE_POSE.repeat(self.previous_poses, 0)
+                if y is None:
+                    y = AVERAGE_POSE.repeat(self.predicted_poses, 0)
                 self.features.append(x)
                 self.poses.append(y)
                 self.prev_poses.append(p)
@@ -96,10 +134,25 @@ class Seq2SeqDataset(Dataset):
         x = torch.FloatTensor(self.features[index])
         y = torch.FloatTensor(self.poses[index])
         p = torch.FloatTensor(self.prev_poses[index])
+
+        if self.words:
+            w = self.words[index]  # list(seq_len, words_count)
+            w = [torch.LongTensor(frame) if len(frame) > 0 else torch.LongTensor([0]) for frame in w]
+            w = pad_sequence(w, batch_first=True)
+            return x, y, p, w
         return x, y, p
 
     @staticmethod
     def collate_fn(batch):
+        if len(batch[0]) == 4:
+            x, y, p, w = list(zip(*batch))
+            X = torch.stack(x, dim=1)
+            Y = torch.stack(y, dim=1)
+            P = torch.stack(p, dim=1)
+            W = pad_matrix(w) # batch_size, seq_len, words_count
+            W = W.transpose(0, 1) # seq_len, batch_size, words_count
+            return X, Y, P, W
+
         x, y, p = list(zip(*batch))
         X = torch.stack(x, dim=1)
         Y = torch.stack(y, dim=1)

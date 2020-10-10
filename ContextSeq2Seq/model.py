@@ -2,12 +2,73 @@ import torch
 import torch.nn as nn
 
 
-class Encoder(nn.Module):
+class LinearWithBatchNorm(nn.Module):
+    def __init__(self, input_dim: int, output_dim: int):
+        super(LinearWithBatchNorm, self).__init__()
+        self.linear = nn.Linear(input_dim, output_dim)
+        self.batch_norm = nn.BatchNorm1d(61)
+        self.dropout = nn.Dropout(0.1)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.linear(x)
+        x = self.batch_norm(x)
+        x = torch.relu(x)
+        x = self.dropout(x)
+        return x
+
+
+class ContextEncoder(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1):
         super().__init__()
+        self.context_highway = nn.Sequential(
+            LinearWithBatchNorm(input_dim, hidden_dim),
+            LinearWithBatchNorm(hidden_dim, hidden_dim),
+            LinearWithBatchNorm(hidden_dim, hidden_dim)
+        )
+        self.context_gru = nn.GRU(hidden_dim, hidden_dim, 1, batch_first=True)
+        self.batch_norm = nn.BatchNorm1d(hidden_dim)
+        self.dropout = nn.Dropout(0.1)
+        self.rnn = nn.GRU(
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
+        )
+        self.hidden_dim = hidden_dim
+
+        self.words_gru = nn.GRU(100, 100, 1, batch_first=True, bidirectional=True)
+        self.merge_layer = nn.Linear(hidden_dim + 200, hidden_dim)
+
+    def forward(self, x, w):
+        seq_len, batch, context, input_dim = x.shape
+        x = x.reshape(seq_len * batch, context, input_dim)  # batch*seq_len, context, input_dim
+        x = self.context_highway(x)  # batch*seq_len, context, hidden_dim
+        x = self.context_gru(x)[0][:, -1, :]  # batch*seq_len, hidden_dim
+        x = self.batch_norm(x)
+        x = torch.relu(x)
+
+        _, _, words_count, embedding = w.shape
+        w = w.reshape(seq_len * batch, words_count, embedding)
+        w = self.words_gru(w)[0][:, -1, :]  # batch*seq_len, words_hidden
+        w = torch.relu(w)
+
+        x = x.reshape(seq_len, batch, self.hidden_dim)  # seq_len, batch, hidden_dim
+        w = w.reshape(seq_len, batch, 200)  # seq_len, batch, words_hidden
+
+        x = torch.cat((x, w), dim=2)
+        x = self.merge_layer(x)  # seq_len, batch, hidden_dim
+
+        output, hidden = self.rnn(x)
+        return self.dropout(output), self.dropout(hidden)
+
+
+class Encoder(nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int, num_layers: int = 1, with_context: bool = False):
+        super().__init__()
+
+        self.with_context = with_context
+        if with_context:
+            self.context_gru = nn.GRU(input_dim, input_dim, 1, batch_first=True)
 
         self.rnn = nn.GRU(
-            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers
+            hidden_dim, hidden_dim, bidirectional=True, num_layers=num_layers, batch_first=False
         )
         self.highway = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -20,8 +81,14 @@ class Encoder(nn.Module):
         self.num_layers = num_layers
 
     def forward(self, x):
-        seq_len, batch, input_dim = x.shape
         # x - [seq_len, batch, input_dim]
+        if self.with_context:
+            seq_len, batch, context, input_dim = x.shape
+            x = x.reshape(seq_len*batch, context, input_dim)  # batch*seq_len, context, input_dim
+            x = self.context_gru(x)[0][:, -1, :]  # batch*seq_len, input_dim
+            x = x.reshape(seq_len, batch, input_dim)  # seq_len, batch, input
+
+        # seq_len, batch, input
         x = self.highway(x)
         output, hidden = self.rnn(x)
         # output - seq_len, batch, num_directions * hidden_size
@@ -114,39 +181,3 @@ class Decoder(nn.Module):
         poses = torch.cat(poses, dim=0)
         # poses = torch.stack(poses, dim=0).squeeze(0)
         return poses
-
-
-class Discriminator(nn.Module):
-
-    def __init__(self, ch_in, ch_hid = 100) -> None:
-        super().__init__()
-        # TODO: cp from here https://github.com/amirbar/speech2gesture/blob/24bf0d515a098910e6d5f2e64f280055ed2ad938/audio_to_multiple_pose_gan/static_model_factory.py#L35
-        self.net = nn.Sequential( # for t_in = 20
-            nn.Conv1d(ch_in, ch_hid, 4, 2),  # t -> 9
-            nn.BatchNorm1d(ch_hid),
-            nn.LeakyReLU(0.2),
-
-            nn.Conv1d(ch_hid, ch_hid * 2, 3, 2),  # t -> 4
-            nn.BatchNorm1d(ch_hid * 2),
-            nn.LeakyReLU(0.2),
-            # nn.Conv1d(ch_hid, ch_hid, 3),#t-4
-            # nn.BatchNorm1d(ch_hid),
-            # nn.LeakyReLU(0.2),
-            # nn.Conv1d(ch_hid, 1, 3),# 1, t-6
-            # nn.BatchNorm1d(ch_hid),
-            # nn.LeakyReLU(0.2),
-        )
-        self.flat = nn.Sequential(
-            nn.Linear(ch_hid * 2 * 4, ch_hid),
-            nn.LeakyReLU(0.2),
-            nn.Linear(ch_hid, 1)
-        )
-
-    def forward(self, x_seq, x_cond_seq=None):
-        # TODO: consider speeds in x_seq
-        assert x_cond_seq is None
-        x_seq = x_seq.permute((1, 2, 0))  # (time, batch, ch) -> (batch, ch, time)
-        x = self.net(x_seq)
-        x = x.reshape((x.size(0), -1))
-        x = self.flat(x)
-        return x

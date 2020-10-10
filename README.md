@@ -62,5 +62,14 @@ audio and motion features respectively. Optionally adds contexts to the each aud
     python DataProcessing/normalize_data.py --src data/Ready --dst data/Normalized
     ```
 
+5. Splitting into train & valid. We were validation on Recording_001, the rest was used for training.
+
+```
+mkdir -p data/dataset/train data/dataset/test
+cp data/Ready/* data/dataset/train
+mv data/dataset/train/data_001.npz data/dataset/test
+```
+
+
 After running these 4 scripts listed above we get numpy archives appropriate for training models.
 
