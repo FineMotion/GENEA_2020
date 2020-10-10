@@ -7,7 +7,7 @@ from torch import nn
 from torch.nn import MSELoss
 from torch.utils.data import DataLoader
 
-from model import Encoder, Decoder, ContextEncoder
+from model import Decoder, ContextEncoder
 from dataset import Seq2SeqDataset
 from text import Vocab
 
@@ -25,7 +25,6 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
         parser.add_argument("--stride", type=int, default=None)
         parser.add_argument("--batch_size", type=int, default=50)
-        parser.add_argument("--with_context", action="store_true", default=False)
         parser.add_argument("--embedding", type=str, default=None)
         parser.add_argument("--text_folder", type=str, default=None)
         return parser
@@ -40,7 +39,6 @@ class Seq2SeqSystem(pl.LightningModule):
         previous_poses: int = 10,
         stride: int = None,
         batch_size: int = 50,
-        with_context: bool = False,
         embedding: str = None,
         text_folder: str = None,
         *args,
@@ -48,10 +46,7 @@ class Seq2SeqSystem(pl.LightningModule):
     ):
         super().__init__()
         self.save_hyperparameters()
-        if with_context:
-            self.encoder = ContextEncoder(26, 150, 1)
-        else:
-            self.encoder = Encoder(26, 150, 1, with_context)
+        self.encoder = ContextEncoder(26, 150, 1)
         self.decoder = Decoder(45, 150, 300, max_gen=predicted_poses)
         self.predicted_poses = predicted_poses
         self.previous_poses = previous_poses
@@ -62,7 +57,6 @@ class Seq2SeqSystem(pl.LightningModule):
         self.beta = beta
         self.stride = predicted_poses if stride is None else stride
         self.batch_size = batch_size
-        self.with_context = with_context
         if embedding is not None:
             self.vocab = Vocab(embedding)
             self.embedder = nn.Embedding(len(self.vocab.token_to_idx), len(self.vocab.weights[0]),
@@ -125,13 +119,13 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def train_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path(self.train_folder).glob("*.npz"),
-            self.previous_poses,
-            self.predicted_poses,
-            self.stride,
-            self.with_context,
-            self.text_folder,
-            self.vocab
+            data_files=Path(self.train_folder).glob("*.npz"),
+            previous_poses=self.previous_poses,
+            predicted_poses=self.predicted_poses,
+            stride=self.stride,
+            with_context=True,
+            text_folder=self.text_folder,
+            vocab=self.vocab
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn
@@ -140,13 +134,13 @@ class Seq2SeqSystem(pl.LightningModule):
 
     def val_dataloader(self):
         dataset = Seq2SeqDataset(
-            Path(self.test_folder).glob("*.npz"),
-            self.previous_poses,
-            self.predicted_poses,
-            self.stride,
-            self.with_context,
-            self.text_folder,
-            self.vocab
+            data_files=Path(self.test_folder).glob("*.npz"),
+            previous_poses=self.previous_poses,
+            predicted_poses=self.predicted_poses,
+            stride=self.stride,
+            with_context=True,
+            text_folder=self.text_folder,
+            vocab=self.vocab
         )
         loader = DataLoader(
             dataset, batch_size=self.batch_size, shuffle=True, collate_fn=dataset.collate_fn

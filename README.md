@@ -79,13 +79,23 @@ After running these 4 scripts listed above we get numpy archives appropriate for
 There are 2 types of models in this repository, both are based on a seq2seq architecture.
 * ContextSeq2Seq - a seq2seq with a context encoder, which at each steps combines words and audio features in an encoder cell. This model is described in section 3.2 of our article.
 ```
-TODO: Влад, напиши как запускать обучение.
+python ContextSeq2Seq\train.py  --gpus 1 --predicted-poses 20 --previous-poses 10 --serialize-dir new  --max_epochs 100 --stide  --batch_size 50 --embedding .\embeddings\glove.6B.100d.txt --text_folder data\Transcripts 
 ```
 * WordsSeq2Seq - seq2seq, which uses attention over encoded words & audio features. This model is described in section 3.2 of our work.
 
 ```
 python WordsSeq2Seq/train.py --gpus 1 --predicted-poses 20 --previous-poses 10 --serialize-dir new --max_epochs 100 --stride 1 --batch_size 512 --with_context --embedding embeddings/glove.6B.100d.txt --text_folder data/Transcripts
 ```
+
+Both models have common params:
+- Parameters for pytorch lightning [Trainer](https://pytorch-lightning.readthedocs.io/en/latest/trainer.html#)
+- `--predicted-poses` - number of frames in sequence per instance
+- `--previous-poses` - number of previous poses to initialize decoder state
+- `--serialize-dir` - folder to save checkpoints
+- `--stride` - margin between two successive instances
+- `--embedding` - path to GLOVE embeddings file
+- `--text_folder` - path to text transcripts
+For WordsSeq2Seq model argument `--with_context` add contexts for audio encoder
 
 ## Predicting
 TODO: дописать предикты и датасеты без Y. Заодно проверить, что предиктит вообще.
