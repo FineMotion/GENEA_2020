@@ -1,7 +1,9 @@
 # FineMotion
 This repo provides a solution for GENEA Challange 2020.
-## Table of content
+## Table of contents
 - [Data processing](#Data-processing) 
+- [Training](#Training)
+- [Predicting](#Predicting)
 
 ## Data processing
 The folder `DataProcessing` contains scripts for features extraction, data normalization and generation of output video.
@@ -73,3 +75,17 @@ mv data/dataset/train/data_001.npz data/dataset/test
 
 After running these 4 scripts listed above we get numpy archives appropriate for training models.
 
+## Training
+There are 2 types of models in this repository, both are based on a seq2seq architecture.
+* ContextSeq2Seq - a seq2seq with a context encoder, which at each steps combines words and audio features in an encoder cell. This model is described in section 3.2 of our article.
+```
+TODO: Влад, напиши как запускать обучение.
+```
+* WordsSeq2Seq - seq2seq, which uses attention over encoded words & audio features. This model is described in section 3.2 of our work.
+
+```
+python WordsSeq2Seq/train.py --gpus 1 --predicted-poses 20 --previous-poses 10 --serialize-dir new --max_epochs 100 --stride 1 --batch_size 512 --with_context --embedding embeddings/glove.6B.100d.txt --text_folder data/Transcripts
+```
+
+## Predicting
+TODO: дописать предикты и датасеты без Y. Заодно проверить, что предиктит вообще.

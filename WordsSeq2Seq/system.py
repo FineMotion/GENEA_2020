@@ -22,11 +22,11 @@ class Seq2SeqSystem(pl.LightningModule):
         parser.add_argument("--previous-poses", type=int, default=10)
         parser.add_argument("--alpha", type=float, default=0.01, help="Continuity loss multiplier.")
         parser.add_argument("--beta", type=float, default=1.0, help="Variance loss multiplier.")
-        parser.add_argument("--stride", type=int, default=None)
+        parser.add_argument("--stride", type=int, default=None, help="Stride for training samples.")
         parser.add_argument("--batch_size", type=int, default=50)
-        parser.add_argument("--with_context", action="store_true", default=False)
-        parser.add_argument("--embedding", type=str, default=None)
-        parser.add_argument("--text_folder", type=str, default=None)
+        parser.add_argument("--with_context", action="store_true", default=False, help="Enable context encoder.")
+        parser.add_argument("--embedding", type=str, default=None, help="Path to embeddings. The work uses standart glove.6B.100d.txt")
+        parser.add_argument("--text_folder", type=str, default=None, help="Path to folder with transcripts.")
         return parser
 
     def __init__(
