@@ -65,7 +65,7 @@ audio and motion features respectively. Optionally adds contexts to the each aud
     python DataProcessing/normalize_data.py --src data/Ready --dst data/Normalized
     ```
 
-5. Splitting into train & valid. We were validation on Recording_001, the rest was used for training.
+5. Splitting into train & valid. We were validating on Recording_001, the rest was used for training.
 
 ```
 mkdir -p data/dataset/train data/dataset/test
