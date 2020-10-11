@@ -122,14 +122,14 @@ Common parameters:
 - `--pipe` - pipeline path obtained from processing motions
 
 ## Processing test dataset
-Assume that test audio and transcripts are placed in folders `data\Test\Audio` and `data\Test\Transcripts`. To make predictions for the test dataset you need to follow these steps:
+Assume that test audio and transcripts are placed in folders `data/Test/Audio` and `data/Test/Transcripts`. To make predictions for the test dataset you need to follow these steps:
 - Get MFCC features from audio:
 ```
-python DataProcessing\process_audio.py --src data\Test\Audio --dst data\Test\MFCC
+python DataProcessing/process_audio.py --src data/Test/Audio --dst data/Test/MFCC
 ```
 - Add contexts to Audio features:
 ```
-python DataProcessing\align_data.py --audio_dir data\Test\MFCC --dst_dir data\Test\Ready --with_context
+python DataProcessing/align_data.py --audio_dir data/Test/MFCC --dst_dir data/Test/Ready --with_context
 ```
 - Rename transcripts (`TestSeq%3d.json -> Recording_%3d.json`): 
 ```shell script
@@ -154,5 +154,5 @@ pytorch reimplementation of one of the
  - `VariationalAutoEncoder` - is our attempt to change autoencoder in baseline mentioned before by Variational Auto Encoder.
 - Our experiments with adversarial learning are located in branches `seq2seq_asmekal` and `seq2seq_gan`.
  
-The code listed above was not been tested, so it may not work.
+The code listed above has not been tested, so it may not work.
 
