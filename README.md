@@ -4,7 +4,8 @@ This repo provides a solution for GENEA Challange 2020.
 - [Data processing](#Data-processing) 
 - [Training](#Training)
 - [Predicting](#Predicting)
-
+- [Processing test dataset](#Processing-test-dataset)
+- [Extra](#Extra)
 ## Data processing
 The folder `DataProcessing` contains scripts for features extraction, data normalization and generation of output video.
 The pipeline is based on one of [baselines](https://github.com/GestureGeneration/Speech_driven_gesture_generation_with_autoencoder/blob/GENEA_2020/data_processing/).
@@ -119,3 +120,39 @@ Common parameters:
 - `--smooth` - apply Savitzky-Golay filter to predicted motion features
 - `--mean` - file with mean values obtained from normalization
 - `--pipe` - pipeline path obtained from processing motions
+
+## Processing test dataset
+Assume that test audio and transcripts are placed in folders `data\Test\Audio` and `data\Test\Transcripts`. To make predictions for the test dataset you need to follow these steps:
+- Get MFCC features from audio:
+```
+python DataProcessing\process_audio.py --src data\Test\Audio --dst data\Test\MFCC
+```
+- Add contexts to Audio features:
+```
+python DataProcessing\align_data.py --audio_dir data\Test\MFCC --dst_dir data\Test\Ready --with_context
+```
+- Rename transcripts (`TestSeq%3d.json -> Recording_%3d.json`): 
+```shell script
+powershell:
+cd data\Test\Transcripts
+Dir | Rename-Item -NewName {$_.name -replace "TestSeq","Recording_"}
+```
+- Predict:
+```shell script
+python ContextSeq2Seq/predict.py --src data/Test/Ready/TestSeq001.npy --checkpoint text_encoder/last.ckpt --dest predictions/data_001.npy --text_folder data/Test/Transcripts
+```
+Visualization is the same as with train dataset.
+
+## Extra
+Checkpoints and some examples of generated motions can be found
+ [here](https://drive.google.com/drive/folders/17a2guNld9YBLzy3477nn7UECBOpwmLAN?usp=sharing)
+ 
+There are some other approaches we tried on this repo.
+ - Folders `DenoisingAutoEncoder` and `SpeechEncoder` are our 
+pytorch reimplementation of one of the 
+[baselines](https://github.com/GestureGeneration/Speech_driven_gesture_generation_with_autoencoder/tree/GENEA_2020). 
+ - `VariationalAutoEncoder` - is our attempt to change autoencoder in baseline mentioned before by Variational Auto Encoder.
+- Our experiments with adversarial learning are located in branches `seq2seq_asmekal` and `seq2seq_gan`.
+ 
+The code listed above was not been tested, so it may not work.
+
