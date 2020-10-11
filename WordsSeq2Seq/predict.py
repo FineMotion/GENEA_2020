@@ -10,15 +10,17 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--dest", type=str, required=True)
+    parser.add_argument("--src", type=str)
+    parser.add_argument("--text_folder", type=str)
     args = parser.parse_args()
     system = Seq2SeqSystem.load_from_checkpoint(args.checkpoint, train_folder=None, test_folder="data/dataset/test")
     system = system.eval().cuda()
-    dataset = Seq2SeqDataset(Path("data/dataset/test").glob("*001.npz"),
+    dataset = Seq2SeqDataset([Path(args.src)],
                              previous_poses=system.previous_poses,
                              predicted_poses=system.predicted_poses,
                              stride=system.predicted_poses,
                              with_context=system.with_context,
-                             text_folder="data/Transcripts",
+                             text_folder=args.text_folder,
                              vocab=system.vocab)
     prev_poses = system.predicted_poses
     pred_poses = system.previous_poses

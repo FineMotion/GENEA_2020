@@ -99,9 +99,23 @@ For WordsSeq2Seq model argument `--with_context` add contexts for audio encoder
 
 ## Predicting
 
-The `predict.py` file should be used from an according model folder. The code predicts from file in data/dataset/test.
+The `predict.py` file should be used from an according model folder. This code example predicts motion features 
+from valid file:
 ```
-python WordsSeq2Seq/predict.py --checkpoint new/last.ckpt --dest pred.npy
-python create_mp4.py --pred pred.npy --dest vid.mp4 --smooth --audio old_data/Audio/Recording_001.wav --mean mean_pose.npz
+python WordsSeq2Seq/predict.py --src data/dataset/test/data_001.npz --checkpoint new/last.ckpt --dest predictions/data_001.npy -text_folder data/Transcripts
 ```
 
+To create bvh or mp4 files from predicted features use `create_bvh.py` or `create_mp4.py`:
+```
+python create_mp4.py --pred predicions/pred.npy --dest vid.mp4 --smooth --audio data/Audio/Recording_001.wav --mean mean_pose.npz
+python create_bvh.py --pred predictions --dest results --smooth --mean mean_pose.npz
+```
+
+`create_bvh.py` takes folder on input (`--pred`) and generates bvh-file to output folder (`--dest`) for each npy-file from input folder\
+`create_mp4.py` takes only one npy-file (`--pred`) to generate mp4-file (`--dest`) using visualization server. 
+Also takes `--audio` parameter - path to the input audio file to merge it with silent visualization video.
+
+Common parameters:
+- `--smooth` - apply Savitzky-Golay filter to predicted motion features
+- `--mean` - file with mean values obtained from normalization
+- `--pipe` - pipeline path obtained from processing motions

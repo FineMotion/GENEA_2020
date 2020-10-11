@@ -21,7 +21,7 @@ if __name__ == "__main__":
                              previous_poses=system.previous_poses,
                              predicted_poses=system.predicted_poses,
                              stride=system.predicted_poses,
-                             with_context=system.with_context,
+                             with_context=True,
                              text_folder=args.text_folder,
                              vocab=system.vocab
                              )
