@@ -98,4 +98,10 @@ Both models have common params:
 For WordsSeq2Seq model argument `--with_context` add contexts for audio encoder
 
 ## Predicting
-TODO: дописать предикты и датасеты без Y. Заодно проверить, что предиктит вообще.
+
+The `predict.py` file should be used from an according model folder. The code predicts from file in data/dataset/test.
+```
+python WordsSeq2Seq/predict.py --checkpoint new/last.ckpt --dest pred.npy
+python create_mp4.py --pred pred.npy --dest vid.mp4 --smooth --audio old_data/Audio/Recording_001.wav --mean mean_pose.npz
+```
+
